@@ -1,0 +1,34 @@
+[package]
+name = "anon-aadhaar-halo2"
+version = "0.1.0"
+edition = "2021"
+authors = ["Hridam Basu"]
+description = "RSA-SHA256 verification circuit in Halo2."
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+half = "2.2.0"
+halo2-base = { version = "0.2.2", default-features = false, features = [
+    "halo2-pse",
+    "display",
+], git = "https://github.com/axiom-crypto/halo2-lib.git", rev = "9860acc" }
+halo2-dynamic-sha256 = { git = "https://github.com/zkemail/halo2-dynamic-sha256.git", version = "0.1.0", branch = "main", optional = true }
+halo2-ecc = { version = "0.2.2", default-features = false, features = [
+    "halo2-pse",
+    "display",
+], git = "https://github.com/axiom-crypto/halo2-lib.git", rev = "9860acc" }
+num-bigint = { version = "0.4", features = ["rand"] }
+num-traits = "0.2.15"
+rand = "0.8.5"
+rsa = { version = "0.9.6", features = ["serde", "sha2"] }
+sha2 = "0.10.6"
+
+[dev-dependencies]
+criterion = "0.4"
+
+[features]
+default = ["sha256"]
+sha256 = ["halo2-dynamic-sha256"]
