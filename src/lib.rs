@@ -32,6 +32,8 @@ use rsa::{
     RsaPublicKey,
 };
 
+mod timestamp;
+mod nullifier;
 mod chip;
 mod instructions;
 pub use chip::*;
