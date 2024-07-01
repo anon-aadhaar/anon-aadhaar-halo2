@@ -36,6 +36,7 @@ mod extractors{
     pub mod extractor;
     pub mod timstamp_extractor;
     pub mod age_extractor;
+    pub mod gender_extractor;
 }
 
 //use extractors::{ , TimestampExtractor};
