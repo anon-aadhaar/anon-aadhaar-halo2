@@ -35,6 +35,7 @@ use rsa::{
 mod extractors{
     pub mod extractor;
     pub mod timstamp_extractor;
+    pub mod age_extractor;
 }
 
 //use extractors::{ , TimestampExtractor};
