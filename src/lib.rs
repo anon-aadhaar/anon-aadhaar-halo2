@@ -32,6 +32,7 @@ use rsa::{
     RsaPublicKey,
 };
 
+mod nullifier;
 mod chip;
 mod instructions;
 pub use chip::*;
