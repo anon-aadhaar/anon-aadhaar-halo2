@@ -70,3 +70,52 @@ impl<F: ScalarField> Nullifier<F> {
         Ok(nullifier_hash)
     }
 }
+
+#[cfg(test)]
+mod test {
+    // Import necessary crates and modules
+    use halo2::{
+        arithmetic::FieldExt,
+        circuit::{Layouter, SimpleFloorPlanner},
+        dev::{MockProver, VerifyFailure},
+        plonk::{Circuit, ConstraintSystem, Error},
+        poly::Rotation,
+    };
+    use halo2_ecc::fields::{FpChip, RangeChip};
+    use halo2_poseidon::{OptimizedPoseidonSpec, PoseidonChip};
+
+    // Import your Nullifier struct and other necessary items
+    use crate::Nullifier; 
+
+    // Define a test function
+    #[test]
+    fn test_nullifier_calculation() {
+        // Initialize a Halo2 context (MockProver for testing purposes)
+        let mut prover = MockProver::<Fp>::new();
+
+        // Setup components (RangeChip and Poseidon hasher)
+        let spec = OptimizedPoseidonSpec::<Fp, 3, RATE>::default();
+        let range_chip = RangeChip::new(&mut prover.context(), spec.rate());
+        let poseidon_chip = PoseidonChip::new(&mut prover.context(), spec.clone(), &range_chip);
+
+        // Test inputs (example values, adjust as per your actual inputs)
+        let nullifier_seed = AssignedValue::new(Fp::from(12345)); // Example nullifier seed
+        let photo = vec![
+            AssignedValue::new(Fp::from(1)),  // Example photo values (adjust as needed)
+            AssignedValue::new(Fp::from(2)),
+            // Add more values as needed up to 32 elements
+        ];
+
+        // Create a Nullifier instance with test inputs
+        let nullifier = Nullifier::new(nullifier_seed, photo.clone());
+
+        // Calculate the nullifier hash
+        let result = nullifier.calculate_nullifier(&mut prover.context());
+        assert!(result.is_ok(), "Nullifier calculation failed: {:?}", result.err());
+
+        // Optionally, verify the nullifier hash against expected values
+        let expected_hash = result.unwrap();
+        let expected_value = Fp::from(123456789); // Example expected nullifier hash value
+        assert_eq!(expected_hash.value(), &expected_value);
+    }
+}
