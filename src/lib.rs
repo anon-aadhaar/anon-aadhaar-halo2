@@ -32,7 +32,12 @@ use rsa::{
     RsaPublicKey,
 };
 
-mod extractor;
+mod extractors{
+    pub mod extractor;
+    pub mod timstamp_extractor;
+}
+
+//use extractors::{ , TimestampExtractor};
 mod chip;
 mod instructions;
 pub use chip::*;
