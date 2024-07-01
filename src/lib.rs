@@ -32,6 +32,7 @@ use rsa::{
     RsaPublicKey,
 };
 
+mod conditional_secrets;
 mod chip;
 mod instructions;
 pub use chip::*;
