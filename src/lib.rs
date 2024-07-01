@@ -39,6 +39,7 @@ mod extractors{
     pub mod gender_extractor;
     pub mod pincode_extractor;
     pub mod photo_extractor;
+    pub mod qrdata_extractor;
 }
 
 //use extractors::{ , TimestampExtractor};
