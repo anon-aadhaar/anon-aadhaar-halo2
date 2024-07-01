@@ -6,6 +6,8 @@
 //!
 //! In addition to [`RSAConfig`], this library also provides a high-level circuit implementation to verify pkcs1v15 signatures, [`RSASignatureVerifier`].  
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
+#![feature(stdsimd)]
+#![feature(stdarch_x86_avx512)]
 
 pub mod big_uint;
 pub use big_uint::*;

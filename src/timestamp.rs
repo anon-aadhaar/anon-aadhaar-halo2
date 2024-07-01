@@ -7,8 +7,7 @@ use halo2_base::halo2_proofs::{
 use curve25519_dalek::scalar::Scalar;
 
 struct DigitBytesToTimestampConfig {
-    // Define your configuration here
-    pub days_till_previous_month: Column<Advice>,
+    pub max_years: Column<Advice>,
     pub days_passed: Column<Advice>,
     pub total_days_passed: Column<Advice>,
     pub year: Column<Advice>,
@@ -62,7 +61,7 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
         meta.enable_equality(out);
 
         DigitBytesToTimestampConfig {
-            days_till_previous_month,
+            max_years,
             days_passed,
             total_days_passed,
             year,
@@ -125,56 +124,84 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
         )?;
 
         // These do not add constraints, but can help to catch errors during witness generation
-        cs.create_gate("year_constraints", |meta| {
+        cs.create_gate("date_time_constraints", |meta| {
             let year = meta.query_advice(config.year, Rotation::cur());
-            vec![
-                (year - F::from(1970), F::zero()),
-                (year - F::from(self.max_years), F::zero()),
-            ]
-        })?;
-
-        cs.create_gate("month_constraints", |meta| {
             let month = meta.query_advice(config.month, Rotation::cur());
-            vec![
-                (month - F::from(1), F::zero()),
-                (month - F::from(12), F::zero()),
-            ]
-        })?;
-
-        cs.create_gate("day_constraints", |meta| {
             let day = meta.query_advice(config.day, Rotation::cur());
-            vec![
-                (day - F::from(1), F::zero()),
-                (day - F::from(31), F::zero()),
-            ]
-        })?;
-
-        cs.create_gate("hour_constraints", |meta| {
             let hour = meta.query_advice(config.hour, Rotation::cur());
-            vec![
-                (hour - F::from(0), F::zero()),
-                (hour - F::from(23), F::zero()),
-            ]
-        })?;
-
-        cs.create_gate("minute_constraints", |meta| {
             let minute = meta.query_advice(config.minute, Rotation::cur());
-            vec![
-                (minute - F::from(0), F::zero()),
-                (minute - F::from(59), F::zero()),
-            ]
-        })?;
-
-        cs.create_gate("second_constraints", |meta| {
             let second = meta.query_advice(config.second, Rotation::cur());
+            let max_years = F::from(config.max_years);  // max_years should be provided as a constant
+        
+            let zero = F::zero();
+            let one = F::one();
+            let twelve = F::from(12);
+            let thirty_one = F::from(31);
+            let twenty_three = F::from(23);
+            let fifty_nine = F::from(59);
+            let nineteen_seventy = F::from(1970);
+            let one_month = F::from(1);
+            let one_day = F::from(1);
+        
             vec![
-                (second - F::from(0), F::zero()),
-                (second - F::from(59), F::zero()),
+                // year >= 1970
+                (year.clone() - nineteen_seventy.clone() + one.clone(), one.clone()),
+                // year <= maxYears
+                (max_years.clone() - year.clone() + one.clone(), one.clone()),
+        
+                // month >= 1
+                (month.clone() - one_month.clone(), zero.clone()),
+        
+                // month <= 12
+                (twelve.clone() - month.clone() + one.clone(), one.clone()),
+        
+                // day >= 1
+                (day.clone() - one_day.clone(), zero.clone()),
+        
+                // day <= 31
+                (thirty_one.clone() - day.clone() + one.clone(), one.clone()),
+        
+                // hour >= 0
+                (hour.clone(), zero.clone()),
+        
+                // hour <= 23
+                (twenty_three.clone() - hour.clone() + one.clone(), one.clone()),
+        
+                // minute >= 0
+                (minute.clone(), zero.clone()),
+        
+                // minute <= 59
+                (fifty_nine.clone() - minute.clone() + one.clone(), one.clone()),
+        
+                // second >= 0
+                (second.clone(), zero.clone()),
+        
+                // second <= 59
+                (fifty_nine.clone() - second.clone() + one.clone(), one.clone()),
             ]
         })?;
-
-        // Placeholder for computing total days passed and final output
-        // Implement logic similar to Circom's logic to calculate the days passed and the final output
+        
+        cs.create_gate("calculate_out", |meta| {
+            let total_days_passed = meta.query_advice(config.total_days_passed, Rotation::cur());
+            let hour = meta.query_advice(config.hour, Rotation::cur());
+            let minute = meta.query_advice(config.minute, Rotation::cur());
+            let second = meta.query_advice(config.second, Rotation::cur());
+            let out = meta.query_advice(config.out, Rotation::cur());
+        
+            let days_in_seconds = F::from(86400);
+            let hours_in_seconds = F::from(3600);
+            let minutes_in_seconds = F::from(60);
+        
+            // Calculate out = totalDaysPassed * 86400 + hour * 3600 + minute * 60 + second
+            let expected_out = total_days_passed * days_in_seconds 
+                               + hour * hours_in_seconds 
+                               + minute * minutes_in_seconds 
+                               + second;
+        
+            vec![
+                (out - expected_out, F::zero())
+            ]
+        })?;        
 
         Ok(())
     }
@@ -187,15 +214,57 @@ fn calculate_days_passed<F: FieldExt>(
     month: &AssignedCell<F, F>,
     day: &AssignedCell<F, F>,
 ) -> Result<AssignedCell<F, F>, Error> {
-    // Implement logic to calculate the total days passed based on the year, month, and day
-    // Similar to the Circom logic for calculating days passed till the previous month, leap years, etc.
+    
+    let days_till_previous_month = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
-    // Placeholder for total days passed calculation
+    let year_offset = year.value().unwrap() - 1970;
+    let mut days_passed = vec![year_offset * 365];
+    days_passed.push(day.value().unwrap() - 1);
+
+    let mut is_current_month = vec![];
+    for i in 0..12 {
+        let is_equal = (month.value().unwrap() - 1) == i;
+        is_current_month.push(is_equal);
+
+        let days_till_month = if is_equal { days_till_previous_month[i] } else { 0 };
+        days_passed.push(days_till_month);
+    }
+
+    let max_years = year_offset;
+    let max_leap_years = max_years / 4;
+
+    let mut is_leap_year_less_than_current_year = vec![];
+    let mut is_leap_year_current_year = vec![];
+    let mut is_current_month_after_feb = vec![];
+
+    for i in 0..max_leap_years {
+        let less_than_current_year = year_offset >= (i * 4) + 2;
+        is_leap_year_less_than_current_year.push(less_than_current_year);
+
+        let current_year = year_offset == (i * 4) + 2;
+        is_leap_year_current_year.push(current_year);
+
+        let after_feb = month.value().unwrap() > 2;
+        is_current_month_after_feb.push(after_feb);
+
+        let leap_day_added = if less_than_current_year { 1 } else { 0 };
+        days_passed.push(leap_day_added);
+
+        let current_leap_day = if current_year && after_feb { 1 } else { 0 };
+        days_passed.push(current_leap_day);
+    }
+
+    // Summing up all days passed
+    let mut total_days_passed = days_passed[0];
+    for i in 1..days_passed.len() {
+        total_days_passed += days_passed[i];
+    }
+
     let total_days_passed = cs.assign_advice(
         || "total_days_passed",
         config.total_days_passed,
         0,
-        || Ok(F::zero()), // Placeholder
+        || Ok(F::from(total_days_passed)), 
     )?;
 
     Ok(total_days_passed)
