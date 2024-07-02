@@ -42,7 +42,6 @@ mod extractors{
     pub mod qrdata_extractor;
 }
 
-//use extractors::{ , TimestampExtractor};
 mod chip;
 mod instructions;
 pub use chip::*;
