@@ -20,8 +20,13 @@ halo2-ecc = { version = "0.2.2", default-features = false, features = [
     "halo2-pse",
     "display",
 ], git = "https://github.com/axiom-crypto/halo2-lib.git", rev = "9860acc" }
+halo2_gadgets = "0.3.0"
+halo2_proofs = "0.3.0"
+halo2curves = "0.6.1"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2.15"
+pasta_curves = "0.5.1"
+poseidon = "0.1.0"
 rand = "0.8.5"
 rsa = { version = "0.9.6", features = ["serde", "sha2"] }
 sha2 = "0.10.6"
