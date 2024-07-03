@@ -1,9 +1,9 @@
-use halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner},
     plonk::{Circuit, ConstraintSystem, Error},
     poly::Rotation,
-};
+};*/
 
 /// Helper function to get the position of the reference ID field in the data
 fn reference_id_position() -> usize {
@@ -52,12 +52,12 @@ fn photo_pack_size() -> usize {
 }
 
 // Define your circuit struct
-struct AadhaarCircuit {
+/*struct AadhaarCircuit {
     // Define necessary inputs for your circuit here
-}
+}*/
 
 // Implement the Circuit trait for your circuit
-impl<F: FieldExt> Circuit<F> for AadhaarCircuit {
+/*impl<F: FieldExt> Circuit<F> for AadhaarCircuit {
     type Config = ();
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
@@ -84,4 +84,4 @@ impl<F: FieldExt> Circuit<F> for AadhaarCircuit {
 
         Ok(())
     }
-}
+}*/
