@@ -5,7 +5,7 @@ use halo2_base::halo2_proofs::{
     poly::Rotation,
 };
 use curve25519_dalek::scalar::Scalar;
-
+#[derive(Clone)]
 struct DigitBytesToTimestampConfig {
     pub max_years: Column<Advice>,
     pub days_passed: Column<Advice>,
@@ -19,6 +19,7 @@ struct DigitBytesToTimestampConfig {
     pub out: Column<Advice>,
 }
 
+#[derive(Clone)]
 struct DigitBytesToTimestamp {
     year: Scalar,
     month: Scalar,
@@ -38,7 +39,7 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
         // Define your configuration and constraints here
-        let days_till_previous_month = meta.advice_column();
+        let max_years = meta.advice_column();
         let days_passed = meta.advice_column();
         let total_days_passed = meta.advice_column();
         let year = meta.advice_column();
@@ -49,7 +50,7 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
         let second = meta.advice_column();
         let out = meta.advice_column();
 
-        meta.enable_equality(days_till_previous_month);
+        meta.enable_equality(max_years);
         meta.enable_equality(days_passed);
         meta.enable_equality(total_days_passed);
         meta.enable_equality(year);
