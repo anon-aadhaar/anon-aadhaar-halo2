@@ -5,8 +5,8 @@
     poly::Rotation,
 };*/
 
-/// Helper function to get the position of the reference ID field in the data
-fn reference_id_position() -> usize {
+// Helper function to get the position of the reference ID field in the data
+/*fn reference_id_position() -> usize {
     2
 }
 
@@ -49,7 +49,7 @@ fn max_field_byte_size() -> usize {
 /// The photo can only be of max 32 * 31 bytes (packSize * fieldByteSize)
 fn photo_pack_size() -> usize {
     32
-}
+}*/
 
 // Define your circuit struct
 /*struct AadhaarCircuit {
