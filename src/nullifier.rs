@@ -1,5 +1,5 @@
 
-use halo2_base::halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value}, 
     plonk::{Circuit, ConstraintSystem, Error}
 };
@@ -64,7 +64,7 @@ impl<F: PrimeField> Circuit<F> for NullifierCircuit<F> {
         layouter.constrain_instance(nullifier.cell(), config.hash_instance ,0)?;
 
         Ok(())
-    }
+    }*/
 
     /*fn synthesize(
         &self,
@@ -99,9 +99,9 @@ impl<F: PrimeField> Circuit<F> for NullifierCircuit<F> {
         layouter.constrain_instance(nullifier.cell(), 0)?;
 
         Ok(())
-    }*/
+    }
 }
-/* 
+
 fn main() {
     // Instantiate the circuit with the desired parameters and values.
     let circuit = NullifierCircuit {

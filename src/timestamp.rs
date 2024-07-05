@@ -1,32 +1,30 @@
 use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
-    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+    circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
+    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Expression, Instance},
     poly::Rotation,
 };
-use curve25519_dalek::scalar::Scalar;
+use halo2_base::halo2_proofs::plonk::Expression::Constant as Constant;
+//use curve25519_dalek::scalar::Scalar;
 #[derive(Clone)]
 struct DigitBytesToTimestampConfig {
-    pub max_years: Column<Advice>,
-    pub days_passed: Column<Advice>,
-    pub total_days_passed: Column<Advice>,
-    pub year: Column<Advice>,
-    pub month: Column<Advice>,
-    pub day: Column<Advice>,
-    pub hour: Column<Advice>,
-    pub minute: Column<Advice>,
-    pub second: Column<Advice>,
-    pub out: Column<Advice>,
+    year: Column<Advice>,
+    month: Column<Advice>,
+    day: Column<Advice>,
+    hour: Column<Advice>,
+    minute: Column<Advice>,
+    second: Column<Advice>,
+    out: Column<Instance>,
 }
 
 #[derive(Clone)]
 struct DigitBytesToTimestamp {
-    year: Scalar,
-    month: Scalar,
-    day: Scalar,
-    hour: Scalar,
-    minute: Scalar,
-    second: Scalar,
+    year: u64,
+    month: u64,
+    day: u64,
+    hour: u64,
+    minute: u64,
+    second: u64,
 }
 
 impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
@@ -38,6 +36,131 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
     }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+        let year = meta.advice_column();
+        let month = meta.advice_column();
+        let day = meta.advice_column();
+        let hour = meta.advice_column();
+        let minute = meta.advice_column();
+        let second = meta.advice_column();
+        let out = meta.instance_column();
+
+        meta.create_gate("date_time_constraints", |meta| {
+            let year = meta.query_advice(year, Rotation::cur());
+            let month = meta.query_advice(month, Rotation::cur());
+            let day = meta.query_advice(day, Rotation::cur());
+            let hour = meta.query_advice(hour, Rotation::cur());
+            let minute = meta.query_advice(minute, Rotation::cur());
+            let second = meta.query_advice(second, Rotation::cur());
+            let max_years = F::from(2050); // Replace with appropriate value
+
+            let zero = F::zero();
+            let one = F::one();
+            let twelve = F::from(12);
+            let thirty_one = F::from(31);
+            let twenty_three = F::from(23);
+            let fifty_nine = F::from(59);
+            let nineteen_seventy = F::from(1970);
+
+            vec![
+                ("year range", year.clone() - Expression::Constant(nineteen_seventy)),
+                ("year range", Expression::Constant(max_years.clone()) - year.clone()), 
+                ("month range", month.clone() - Expression::Constant(one.clone())),
+                ("month range", Expression::Constant(twelve) - month.clone()),
+                ("day range", day.clone() - Expression::Constant(one.clone())),
+                ("day range", Expression::Constant(thirty_one) - day.clone()),
+                ("hour range", hour.clone() - Expression::Constant(zero.clone())),
+                ("hour range", Expression::Constant(twenty_three) - hour.clone()),
+                ("minute range", minute.clone() - Expression::Constant(zero.clone())),
+                ("minute range", Expression::Constant(fifty_nine.clone()) - minute.clone()),
+                ("second range", second.clone() - Expression::Constant(zero.clone())),
+                ("second range", Expression::Constant(fifty_nine) - second.clone()),
+            ]
+        });
+
+        meta.create_gate("calculate_out", |meta| {
+            let hour = meta.query_advice(hour, Rotation::cur());
+            let minute = meta.query_advice(minute, Rotation::cur());
+            let second = meta.query_advice(second, Rotation::cur());
+            let out = meta.query_instance(out, Rotation::cur());
+
+            let days_in_seconds = F::from(86400);
+            let hours_in_seconds = F::from(3600);
+            let minutes_in_seconds = F::from(60);
+
+            let year_val = Constant(year);
+            let month_val = Constant(month);
+
+            let expected_out = total_days_passed * days_in_seconds 
+                               + hour * hours_in_seconds 
+                               + minute * minutes_in_seconds 
+                               + second;
+
+            vec![
+                (out - expected_out, F::zero())
+            ]
+        });
+
+        DigitBytesToTimestampConfig {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            out,
+        }
+    }
+
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<(), Error> {
+        layouter.assign_region(
+            || "assign date and time",
+            |mut region| {
+                region.assign_advice(
+                    || "year",
+                    config.year,
+                    0,
+                    || Value::known(F::from(self.year as u64)),
+                )?;
+                region.assign_advice(
+                    || "month",
+                    config.month,
+                    0,
+                    || Value::known(F::from(self.month as u64)),
+                )?;
+                region.assign_advice(
+                    || "day",
+                    config.day,
+                    0,
+                    || Value::known(F::from(self.day as u64)),
+                )?;
+                region.assign_advice(
+                    || "hour",
+                    config.hour,
+                    0,
+                    || Value::known(F::from(self.hour as u64)),
+                )?;
+                region.assign_advice(
+                    || "minute",
+                    config.minute,
+                    0,
+                    || Value::known(F::from(self.minute as u64)),
+                )?;
+                region.assign_advice(
+                    || "second",
+                    config.second,
+                    0,
+                    || Value::known(F::from(self.second as u64)),
+                )?;
+                Ok(())
+            }
+        )
+    }
+
+    /*fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
         // Define your configuration and constraints here
         let max_years = meta.advice_column();
         let days_passed = meta.advice_column();
@@ -205,9 +328,8 @@ impl<F: FieldExt> Circuit<F> for DigitBytesToTimestamp {
         })?;        
 
         Ok(())
-    }
+    }*/
 }
-
 fn calculate_days_passed<F: FieldExt>(
     cs: &mut impl Assignment<F>,
     config: &DigitBytesToTimestampConfig,
