@@ -14,6 +14,7 @@ struct IdentityCircuit {
     reveal_pincode: Option<bool>, 
     pincode: Option<u32>,
     qr_data_pincode: Option<u32>,
+    reveal_state: Option<bool>,
     state: Option<u8>,
     qr_data_state: Option<u8>,
 }
@@ -29,6 +30,7 @@ struct IdentityConfig {
     reveal_pincode: Column<Advice>,
     pincode: Column<Advice>,
     qr_data_pincode: Column<Advice>,
+    reveal_state: Column<Advice>,
     state: Column<Advice>,
     qr_data_state: Column<Advice>,
     s: Selector,
@@ -52,6 +54,7 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
         let reveal_pincode = meta.advice_column();
         let pincode = meta.advice_column();
         let qr_data_pincode = meta.advice_column();
+        let reveal_state = meta.advice_column();
         let state = meta.advice_column();
         let qr_data_state = meta.advice_column();
         let s = meta.selector();
@@ -102,6 +105,12 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
             ]
         });
 
+        meta.create_gate("state constraint", |meta| {
+            let s = meta.query_selector(s);
+            let reveal_state = meta.query_advice(reveal_state, Rotation::cur());
+            vec![s * reveal_state.clone() * (reveal_state - Expression::Constant(F::one()))]
+        });
+
         meta.create_gate("state assignment", |meta| {
             let s = meta.query_selector(s);
             let state = meta.query_advice(state, Rotation::cur());
@@ -121,6 +130,7 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
             reveal_pincode,
             pincode,
             qr_data_pincode,
+            reveal_state,
             state,
             qr_data_state,
             s,
@@ -197,6 +207,13 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
                 )?;
 
                 region.assign_advice(
+                    || "reveal_state",
+                    config.reveal_state,
+                    0,
+                    || Value::known(F::from(self.reveal_state.unwrap_or(false) as u64))
+                )?;
+
+                region.assign_advice(
                     || "state",
                     config.state,
                     0,
@@ -236,6 +253,7 @@ mod tests {
             reveal_pincode: Some(true),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
             state: Some(1),
             qr_data_state: Some(1),
         };
@@ -254,6 +272,7 @@ mod tests {
             reveal_pincode: Some(true),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
             state: Some(1),
             qr_data_state: Some(1),
         };
@@ -261,7 +280,7 @@ mod tests {
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
 
-        // Test case where the constraint should fail
+        // Test case where the constraint should fail due to age_above_18 
         let circuit = IdentityCircuit {
             reveal_age_above_18: Some(true),
             age_above_18: Some(0), // This should fail because age_above_18 should be 1
@@ -272,6 +291,7 @@ mod tests {
             reveal_pincode: Some(true),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
             state: Some(1),
             qr_data_state: Some(1),
         };
@@ -279,7 +299,7 @@ mod tests {
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert!(prover.verify().is_err());
 
-        // Test case where the constraint should fail
+        // Test case where the constraint should fail due to gender
         let circuit = IdentityCircuit {
             reveal_age_above_18: Some(true),
             age_above_18: Some(1), 
@@ -290,6 +310,7 @@ mod tests {
             reveal_pincode: Some(true),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
             state: Some(1),
             qr_data_state: Some(1),
         };
@@ -297,7 +318,26 @@ mod tests {
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert!(prover.verify().is_err());
 
-        // Test case where the constraint should fail
+        // Test case where the constraint should fail due to state
+        let circuit = IdentityCircuit {
+            reveal_age_above_18: Some(true),
+            age_above_18: Some(1), 
+            qr_data_age_above_18: Some(1),
+            reveal_gender: Some(true),
+            gender: Some(1), 
+            qr_data_gender: Some(1),
+            reveal_pincode: Some(true),
+            pincode: Some(123456),
+            qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
+            state: Some(4), // This should fail because state should be 1
+            qr_data_state: Some(1),
+        };
+
+        let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_err());
+
+        // Test case where the reveal_pincode is false
         let circuit = IdentityCircuit {
             reveal_age_above_18: Some(true),
             age_above_18: Some(1), 
@@ -308,6 +348,26 @@ mod tests {
             reveal_pincode: Some(false),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
+            state: Some(1),
+            qr_data_state: Some(1),
+        };
+
+        let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_ok());
+
+        // Test case where the reveal_state is false
+        let circuit = IdentityCircuit {
+            reveal_age_above_18: Some(true),
+            age_above_18: Some(1), 
+            qr_data_age_above_18: Some(1),
+            reveal_gender: Some(true),
+            gender: Some(1), 
+            qr_data_gender: Some(1),
+            reveal_pincode: Some(false),
+            pincode: Some(123456),
+            qr_data_pincode: Some(123456),
+            reveal_state: Some(false),
             state: Some(1),
             qr_data_state: Some(1),
         };
