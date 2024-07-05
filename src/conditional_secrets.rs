@@ -8,6 +8,7 @@ struct IdentityCircuit {
     reveal_age_above_18: Option<bool>,
     age_above_18: Option<u8>,
     qr_data_age_above_18: Option<u8>,
+    reveal_gender: Option<u8>,
     gender: Option<u8>,
     qr_data_gender: Option<u8>,
     pincode: Option<u32>,
@@ -21,6 +22,7 @@ struct IdentityConfig {
     reveal_age_above_18: Column<Advice>,
     age_above_18: Column<Advice>,
     qr_data_age_above_18: Column<Advice>,
+    reveal_gender: Column<Advice>,
     gender: Column<Advice>,
     qr_data_gender: Column<Advice>,
     pincode: Column<Advice>,
@@ -42,6 +44,7 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
         let reveal_age_above_18 = meta.advice_column();
         let age_above_18 = meta.advice_column();
         let qr_data_age_above_18 = meta.advice_column();
+        let reveal_gender = meta.advice_column();
         let gender = meta.advice_column();
         let qr_data_gender = meta.advice_column();
         let pincode = meta.advice_column();
@@ -64,6 +67,12 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
             vec![
                 s * (age_above_18 - reveal_age_above_18 * qr_data_age_above_18)
             ]
+        });
+
+        meta.create_gate("gender constraint", |meta| {
+            let s = meta.query_selector(s);
+            let reveal_gender = meta.query_advice(reveal_gender, Rotation::cur());
+            vec![s * reveal_gender.clone() * (reveal_gender - Expression::Constant(F::one()))]
         });
 
         meta.create_gate("gender assignment", |meta| {
@@ -97,6 +106,7 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
             reveal_age_above_18,
             age_above_18,
             qr_data_age_above_18,
+            reveal_gender,
             gender,
             qr_data_gender,
             pincode,
@@ -132,6 +142,13 @@ impl<F: FieldExt> Circuit<F> for IdentityCircuit {
                     config.age_above_18,
                     0,
                     || Value::known(F::from(self.age_above_18.unwrap_or(0) as u64))
+                )?;
+
+                region.assign_advice(
+                    || "reveal_gender",
+                    config.reveal_gender,
+                    0,
+                    || Value::known(F::from(self.reveal_gender.unwrap_or(0) as u64))
                 )?;
 
                 region.assign_advice(
@@ -196,6 +213,7 @@ mod tests {
             reveal_age_above_18: Some(true),
             age_above_18: Some(1),
             qr_data_age_above_18: Some(1),
+            reveal_gender: Some(1),
             gender: Some(1),
             qr_data_gender: Some(1),
             pincode: Some(123456),
@@ -212,6 +230,7 @@ mod tests {
             reveal_age_above_18: Some(false),
             age_above_18: Some(0),
             qr_data_age_above_18: Some(1),
+            reveal_gender: Some(1),
             gender: Some(1),
             qr_data_gender: Some(1),
             pincode: Some(123456),
@@ -228,7 +247,25 @@ mod tests {
             reveal_age_above_18: Some(true),
             age_above_18: Some(0), // This should fail because age_above_18 should be 1
             qr_data_age_above_18: Some(1),
+            reveal_gender: Some(1),
             gender: Some(1),
+            qr_data_gender: Some(1),
+            pincode: Some(123456),
+            qr_data_pincode: Some(123456),
+            state: Some(1),
+            qr_data_state: Some(1),
+        };
+
+        let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_err());
+
+        // Test case where the constraint should fail
+        let circuit = IdentityCircuit {
+            reveal_age_above_18: Some(true),
+            age_above_18: Some(1), 
+            qr_data_age_above_18: Some(1),
+            reveal_gender: Some(1),
+            gender: Some(0), 
             qr_data_gender: Some(1),
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
