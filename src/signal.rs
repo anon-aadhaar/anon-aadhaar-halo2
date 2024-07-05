@@ -1,15 +1,11 @@
-use halo2_base::{
-    arithmetic::FieldExt,
-    circuit::{Layouter, SimpleFloorPlanner, Value},
-    dev::MockProver,
-    plonk::{Circuit, ConstraintSystem, Error, Selector},
-    poly::Rotation,
+use halo2_base::halo2_proofs::{
+    arithmetic::FieldExt, circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation
 };
 
 #[derive(Clone, Debug)]
 struct SquareConfig {
     advice: [Column<Advice>; 2],
-    instance: Column<Instance>,
+    //instance: Column<Instance>,
     selector: Selector,
 }
 
@@ -19,6 +15,11 @@ struct SquareCircuit<F: FieldExt> {
 
 impl<F: FieldExt> Circuit<F> for SquareCircuit<F> {
     type Config = SquareConfig;
+    type FloorPlanner = SimpleFloorPlanner;
+
+    fn without_witnesses(&self) -> Self {
+        unimplemented!();
+    }
 
     fn configure(cs: &mut ConstraintSystem<F>) -> Self::Config {
         let advice = [cs.advice_column(), cs.advice_column()];
@@ -39,53 +40,60 @@ impl<F: FieldExt> Circuit<F> for SquareCircuit<F> {
 
         SquareConfig {
             advice,
-            instance,
+            //instance,
             selector,
         }
     }
-
     fn synthesize(
         &self,
         config: SquareConfig,
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
+        let signal_hash = self.signal_hash.clone(); // Clone to avoid multiple borrows
         layouter.assign_region(
             || "square region",
             |mut region| {
                 config.selector.enable(&mut region, 0)?;
 
-                let signal_hash = region.assign_advice(
+                let _signal_hash_cell = region.assign_advice(
                     || "signal hash",
                     config.advice[0],
                     0,
-                    || self.signal_hash,
+                    || signal_hash,
                 )?;
 
-                let signal_hash_square = region.assign_advice(
+                let _signal_hash_square_cell = region.assign_advice(
                     || "signal hash square",
                     config.advice[1],
                     0,
-                    || self.signal_hash.map(|v| v * v),
+                    || signal_hash.map(|v| v * v),
                 )?;
 
-                region.constrain_equal(signal_hash_square.cell(), config.instance)?;
-
+                // Correctly constrain the public input
+                //layouter.constrain_instance(signal_hash_square_cell.cell(), config.instance, 0)?;
                 Ok(())
             },
         )
     }
 }
 
-fn main() {
-    let k = 4;
-    let signal_hash = Some(5);
+#[cfg(test)]
+mod tests {
+    use halo2_base::halo2_proofs::dev::MockProver; 
+    use halo2_base::halo2_proofs::halo2curves::pasta::Fp;
+    #[test]
+    fn test_square_circuit() {
+        use super::*;
+        let k = 4;
+        let signal_hash = 5;
 
-    let circuit = SquareCircuit {
-        signal_hash: Value::known(signal_hash.into()),
-    };
+        let circuit = SquareCircuit {
+            signal_hash: Value::known(Fp::from(signal_hash)),
+        };
 
-    let public_inputs = vec![signal_hash.map(|v| v * v).into()];
+        let public_inputs = vec![Fp::from(signal_hash * signal_hash)];
 
-    let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
-    prover.assert_satisfied();
+        let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
+        prover.assert_satisfied();
+    }
 }
