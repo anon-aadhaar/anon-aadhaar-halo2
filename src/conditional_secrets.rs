@@ -318,6 +318,25 @@ mod tests {
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert!(prover.verify().is_err());
 
+        // Test case where the constraint should fail due to pincode
+        let circuit = IdentityCircuit {
+            reveal_age_above_18: Some(true),
+            age_above_18: Some(1), 
+            qr_data_age_above_18: Some(1),
+            reveal_gender: Some(true),
+            gender: Some(1), 
+            qr_data_gender: Some(1),
+            reveal_pincode: Some(true),
+            pincode: Some(654321), // This should fail because pincode should be 123456
+            qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
+            state: Some(4),
+            qr_data_state: Some(1),
+        };
+
+        let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_err());
+
         // Test case where the constraint should fail due to state
         let circuit = IdentityCircuit {
             reveal_age_above_18: Some(true),
@@ -336,6 +355,25 @@ mod tests {
 
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert!(prover.verify().is_err());
+
+        // Test case where the reveal_gender is false
+        let circuit = IdentityCircuit {
+            reveal_age_above_18: Some(true),
+            age_above_18: Some(1), 
+            qr_data_age_above_18: Some(1),
+            reveal_gender: Some(false),
+            gender: Some(1), 
+            qr_data_gender: Some(1),
+            reveal_pincode: Some(false),
+            pincode: Some(123456),
+            qr_data_pincode: Some(123456),
+            reveal_state: Some(true),
+            state: Some(1),
+            qr_data_state: Some(1),
+        };
+
+        let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_ok());
 
         // Test case where the reveal_pincode is false
         let circuit = IdentityCircuit {
