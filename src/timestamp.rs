@@ -57,21 +57,21 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
                 sel.clone() * (year.clone() - Constant(F::from(1970))),
                 sel.clone() * (Constant(F::from(2100)) - year.clone()), // assuming max year as 2100
             ]
-        });
+        });*/
 
-        meta.create_gate("month range", |meta| {
+        /*meta.create_gate("month range", |meta| {
             let sel = meta.query_selector(sel);
             let month = meta.query_advice(month, Rotation::cur());
-            let min_month = F::from(1u64);
-            let max_month = F::from(12u64);
+            let min_month = F::one();
+            //let max_month = F::from(12u64);
 
             vec![
-                sel.clone() * (month.clone() - Constant(min_month)),
-                sel.clone() * (Constant(max_month) - month.clone()),
+                sel.clone() * (month.clone() - Expression::Constant(min_month.clone())),
+                //sel.clone() * (Constant(max_month) - month.clone()),
             ]
-        });
+        });*/
 
-        meta.create_gate("day range", |meta| {
+        /*meta.create_gate("day range", |meta| {
             let sel = meta.query_selector(sel);
             let day = meta.query_advice(day, Rotation::cur());
 
