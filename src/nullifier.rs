@@ -1,15 +1,16 @@
 use halo2_base::halo2_proofs::{
     arithmetic::FieldExt, circuit::{Layouter, SimpleFloorPlanner}, 
-    dev::MockProver, halo2curves::pasta::Fp, 
-    plonk::{Circuit, ConstraintSystem, Error}
+    halo2curves::pasta::Fp, 
+    plonk::{Advice, Circuit, ConstraintSystem, Error, Instance, Column},
 };
 
-use halo2_base::{
+use crate::halo2_ecc::halo2_base::{
     poseidon::{
-        hasher::{PoseidonChip, PoseidonInstructions},
+        hasher::{PoseidonChip, PoseidonInstructions, range_chip},
         spec::OptimizedPoseidonSpec,
     },
     safe_types::FixLenBytes,
+    gates:: RangeChip,
 };
 
 const PHOTO_SIZE: usize = 32;
@@ -21,13 +22,14 @@ struct NullifierCircuit {
 }
 #[derive(Clone)]
 pub struct NullifierConfig {
-    pub nullifier_seed: Option<Fp>,
-    pub photo: [Option<Fp>; PHOTO_SIZE],
-    pub out: Option<Fp>,
+    pub nullifier_seed: Column<Advice>,
+    pub photo: [Column<Advice>; PHOTO_SIZE],
+    pub out: Column<Instance>,
 }
 
 impl<F: FieldExt> Circuit<F> for NullifierCircuit {
-    type Config = NullifierConfig;
+    //type Config = NullifierConfig;
+    type Config = PoseidonChip<F, 3, 2>;
     type FloorPlanner = SimpleFloorPlanner;
     
     fn without_witnesses(&self) -> Self {
@@ -38,69 +40,63 @@ impl<F: FieldExt> Circuit<F> for NullifierCircuit {
         }
     }
 
-    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        let nullifier_seed = meta.alloc_input(|| "nullifier_seed", || Self.nullifier_seed.ok_or_else(|| Error::SynthesisError));
-        let photo = meta.alloc_input(|| "photo", || Self.photo[0].ok_or_else(|| Error::SynthesisError));
-
-        let poseidon_spec = OptimizedPoseidonSpec::new::<3, 2, 3>(); // Example parameters, adjust as needed
-        let poseidon_chip = PoseidonChip::<Fp, 3, 2>::new(meta, poseidon_spec, range_chip);
-
-        let mut hasher = PoseidonInstructions::new(poseidon_chip);
-
-        let first16_hash = hasher.hash_fix_len_bytes(meta, &FixLenBytes::new(photo[0..16]));
-        let last16_hash = hasher.hash_fix_len_bytes(meta, &FixLenBytes::new(photo[16..32]));
-
-        let out = poseidon_chip.hash_fix_len_bytes(meta, &FixLenBytes::new(&[Self.nullifier_seed, first16_hash, last16_hash]));
-
-        NullifierCircuit {
-            nullifier_seed: Some(nullifier_seed),
-            photo,
-            out: Some(out),
-        }
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+        let range_chip = RangeChip::default();
+        let poseidon_spec = OptimizedPoseidonSpec::new::<3, 2, 3>(); // Example Poseidon spec, adjust as needed
+        PoseidonChip::<F, 3, 2>::new(meta, poseidon_spec, &range_chip)
     }
 
     fn synthesize(
         &self,
-        cs: &mut NullifierConfig,
-        spec: &OptimizedPoseidonSpec,
-        layouter: Layouter<F>,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-        let nullifier_seed = cs.alloc_input(|| "nullifier_seed", || self.nullifier_seed.ok_or(Error::SynthesisError))?;
-        let photo = cs.alloc_input(|| "photo", || self.photo[0].ok_or(Error::SynthesisError))?;
-
-        let poseidon_chip = PoseidonChip::<F, 3, 2>::new(cs, spec);
-
-        let mut hasher = PoseidonInstructions::new(poseidon_chip);
-
-        let first16_hash = hasher.hash_fix_len_bytes(cs, &FixLenBytes::new(&self.photo[0..16]))?;
-        let last16_hash = hasher.hash_fix_len_bytes(cs, &FixLenBytes::new(&self.photo[16..32]))?;
-
-        let out = poseidon_chip.hash_fix_len_bytes(cs, &FixLenBytes::new(&[self.nullifier_seed, first16_hash, last16_hash]))?;
-
-        self.out = Some(out);
-
         layouter.assign_region(
-            || "output",
+            || "Nullifier calculation",
             |mut region| {
-                region.assign_advice(|| "out", 0, 0, || self.out.ok_or(Error::SynthesisError))?;
-                Ok(())
-            }
-        )?;
+                let poseidon_spec = OptimizedPoseidonSpec::new::<3, 2, 3>();
+                let poseidon_chip = PoseidonChip::<F, 3, 2>::new(config, poseidon_spec);
+                let mut hasher = PoseidonInstructions::new(poseidon_chip);
 
-        Ok(())
+                let first16_hash = hasher.hash_fix_len_bytes(config, &FixLenBytes::new(&self.photo[0..16]))?;
+                let last16_hash = hasher.hash_fix_len_bytes(config, &FixLenBytes::new(&self.photo[16..32]))?;
+
+                let out = poseidon_chip.hash_fix_len_bytes(config, &FixLenBytes::new(&[self.nullifier_seed, first16_hash, last16_hash]))?;
+                
+                // Output the final hash
+                region.assign_advice(
+                    || "output",
+                    config.output,
+                    0,
+                    || out,
+                )?;
+
+                Ok(())
+            },
+        )
     }
 }
 
-fn main() {
-    let circuit = NullifierCircuit {
-        nullifier_seed: Some(Fp::from(12345)), // Replace with actual nullifier seed
-        photo: [Some(Fp::from(1)); PHOTO_SIZE], // Example initialization, replace with actual photo data
-        out: None,
-    };
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use halo2_base::halo2_proofs::{dev::MockProver, halo2curves::pasta::Fp};
 
-    let prover = MockProver::<Fp>::run(10, &circuit, SimpleFloorPlanner::new()).unwrap();
-    assert_eq!(prover.verify(), Ok(()));
+    #[test]
+    fn nullifier_test() {
+        let circuit = NullifierCircuit {
+            nullifier_seed: Some(Fp::from(12345)), // Replace with actual nullifier seed
+            photo: [Some(Fp::from(1)); PHOTO_SIZE], // Example initialization, replace with actual photo data
+            out: None,
+        };
+
+        let public_inputs = vec![];
+    
+        let prover = MockProver::<Fp>::run(10, &circuit, public_inputs).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+    }
 }
+
 
 
 /*use halo2_gadgets::poseidon::{primitives::*, Hash, Pow5Chip, Pow5Config};
