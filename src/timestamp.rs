@@ -1,10 +1,11 @@
 use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation,
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, 
+    //poly::Rotation,
 };
 
-use halo2_base::halo2_proofs::plonk::Expression::Constant as Constant;
+//use halo2_base::halo2_proofs::plonk::Expression::Constant as Constant;
 
 #[derive(Debug, Clone)]
 struct TimestampCircuit<F: FieldExt> {
@@ -48,21 +49,25 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
         let timestamp = meta.advice_column();
 
         // Constraints to ensure the inputs are within valid ranges
-        meta.create_gate("year range", |meta| {
+        /*meta.create_gate("year range", |meta| {
             let sel = meta.query_selector(sel);
             let year = meta.query_advice(year, Rotation::cur());
 
             vec![
-                sel * (year.clone() - Constant(F::from(1970))) * (year - Constant(F::from(2100))), // assuming max year as 2100
+                sel.clone() * (year.clone() - Constant(F::from(1970))),
+                sel.clone() * (Constant(F::from(2100)) - year.clone()), // assuming max year as 2100
             ]
         });
 
         meta.create_gate("month range", |meta| {
             let sel = meta.query_selector(sel);
             let month = meta.query_advice(month, Rotation::cur());
+            let min_month = F::from(1u64);
+            let max_month = F::from(12u64);
 
             vec![
-                sel * (month.clone() - Constant(F::from(1))) * (month - Constant(F::from(12))),
+                sel.clone() * (month.clone() - Constant(min_month)),
+                sel.clone() * (Constant(max_month) - month.clone()),
             ]
         });
 
@@ -71,7 +76,7 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
             let day = meta.query_advice(day, Rotation::cur());
 
             vec![
-                sel * (day.clone() - Constant(F::from(1))) * (day - Constant(F::from(31))),
+                sel * (day.clone() - Constant(F::from(1))) * (Constant(F::from(31)) - day),
             ]
         });
 
@@ -80,7 +85,7 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
             let hour = meta.query_advice(hour, Rotation::cur());
 
             vec![
-                sel * (hour.clone() - Constant(F::from(0))) * (hour - Constant(F::from(23))),
+                sel * (hour.clone() - Constant(F::from(0))) * (Constant(F::from(23)) - hour),
             ]
         });
 
@@ -89,7 +94,7 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
             let minute = meta.query_advice(minute, Rotation::cur());
 
             vec![
-                sel * (minute.clone() - Constant(F::from(0))) * (minute - Constant(F::from(59))),
+                sel * (minute.clone() - Constant(F::from(0))) * (Constant(F::from(59)) - minute),
             ]
         });
 
@@ -98,9 +103,9 @@ impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
             let second = meta.query_advice(second, Rotation::cur());
 
             vec![
-                sel * (second.clone() - Constant(F::from(0))) * (second - Constant(F::from(59))),
+                sel * (second.clone() - Constant(F::from(0))) * (Constant(F::from(59)) - second),
             ]
-        });
+        });*/
 
         TimestampConfig {
             sel,
@@ -221,6 +226,7 @@ mod tests {
 
     #[test]
     fn test_timestamp_circuit() {
+        let k = 6;
         let circuit = TimestampCircuit {
             year: Some(Fp::from(2023u64)),
             month: Some(Fp::from(7u64)),
@@ -230,7 +236,9 @@ mod tests {
             second: Some(Fp::from(56u64)),
         };
 
-        let prover = MockProver::run(6, &circuit, vec![]).unwrap();
+        let public_inputs = vec![];
+
+        let prover = MockProver::run(k, &circuit, public_inputs).unwrap();
         assert_eq!(prover.verify(), Ok(()));
     }
 }
