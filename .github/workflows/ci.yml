@@ -2,9 +2,10 @@ name: Rust
 
 on:
   push:
-    branches: [ "signal" ]
+    branches: [ "extractor" ]
   pull_request:
-    branches: [ "signal" ]
+    branches: [ "extractor" ]
+
 
 env:
   CARGO_TERM_COLOR: always
