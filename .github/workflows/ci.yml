@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [ "extractor" ]
 
+
 env:
   CARGO_TERM_COLOR: always
 

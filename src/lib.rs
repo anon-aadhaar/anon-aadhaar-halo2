@@ -32,6 +32,8 @@ use rsa::{
     RsaPublicKey,
 };
 
+
+mod signal;
 mod extractors{
     pub mod extractor;
     pub mod timstamp_extractor;
