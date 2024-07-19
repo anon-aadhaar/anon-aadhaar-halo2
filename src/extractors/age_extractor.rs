@@ -1,4 +1,4 @@
-use halo2_base::halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Circuit, ConstraintSystem, Error, Expression, Selector},
@@ -242,5 +242,5 @@ impl<F: FieldExt> Circuit<F> for AgeExtractorCircuit<F> {
             },
         )
     }
-}
+}*/
 

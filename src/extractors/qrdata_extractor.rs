@@ -1,4 +1,4 @@
-use halo2_base::halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
@@ -245,4 +245,4 @@ impl<F: FieldExt> QRDataExtractorCircuit<F> {
             delimiter_indices,
         }
     }
-}
+}*/

@@ -1,4 +1,4 @@
-use halo2_base::{
+/*use halo2_base::{
     arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
     dev::MockProver,
@@ -179,4 +179,4 @@ fn main() {
 
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
     prover.assert_satisfied();
-}
+}*/
