@@ -34,9 +34,10 @@ use rsa::{
     RsaPublicKey,
 };
 
-mod timestamp;
-mod conditional_secrets;
-mod signal;
+mod aadhaar_verifier_circuit;
+pub mod timestamp;
+pub mod conditional_secrets;
+pub mod signal;
 mod extractors{
     pub mod extractor;
     pub mod timstamp_extractor;
@@ -1601,7 +1602,7 @@ mod test {
             for i in 1016..1137 {
                 byte_vec2.push(var_name[i].parse::<u8>().unwrap());
             }
-            let hashed_msg2 = Sha256::digest(&byte_vec2);
+            let hashed_msg2 = Sha256::digest(&byte_vec2); 
             let circuit = TestRSASignatureWithHashCircuit1::<F> {
                 private_key,
                 public_key,

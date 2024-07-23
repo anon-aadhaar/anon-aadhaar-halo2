@@ -8,7 +8,7 @@ use halo2_base::halo2_proofs::{
 //use halo2_base::halo2_proofs::plonk::Expression::Constant as Constant;
 
 #[derive(Debug, Clone)]
-struct TimestampCircuit<F: FieldExt> {
+pub struct TimestampCircuit<F: FieldExt> {
     year: Option<F>,
     month: Option<F>,
     day: Option<F>,
@@ -18,7 +18,7 @@ struct TimestampCircuit<F: FieldExt> {
 }
 
 #[derive(Debug, Clone)]
-struct TimestampConfig {
+pub struct TimestampConfig {
     sel: Selector,
     year: Column<Advice>,
     month: Column<Advice>,

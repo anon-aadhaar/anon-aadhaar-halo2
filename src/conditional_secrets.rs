@@ -4,7 +4,7 @@ use halo2_base::halo2_proofs::poly::Rotation;
 use halo2_base::halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 
 #[derive(Default)]
-struct IdentityCircuit {
+pub struct IdentityCircuit {
     reveal_age_above_18: Option<bool>,
     age_above_18: Option<u8>,
     qr_data_age_above_18: Option<u8>,
@@ -20,7 +20,7 @@ struct IdentityCircuit {
 }
 
 #[derive(Clone)]
-struct IdentityConfig {
+pub struct IdentityConfig {
     reveal_age_above_18: Column<Advice>,
     age_above_18: Column<Advice>,
     qr_data_age_above_18: Column<Advice>,

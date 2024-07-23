@@ -3,13 +3,13 @@ use halo2_base::halo2_proofs::{
 };
 
 #[derive(Clone, Debug)]
-struct SquareConfig {
+pub struct SquareConfig {
     advice: [Column<Advice>; 2],
     //instance: Column<Instance>,
     selector: Selector,
 }
 
-struct SquareCircuit<F: FieldExt> {
+pub struct SquareCircuit<F: FieldExt> {
     signal_hash: Value<F>,
 }
 
