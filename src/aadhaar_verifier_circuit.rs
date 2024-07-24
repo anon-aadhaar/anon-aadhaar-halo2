@@ -1,34 +1,45 @@
 
 pub use big_uint::*;
-use crate::big_uint;
+use crate::{big_uint, TestRSASignatureWithHashCircuit1, TestRSASignatureWithHashConfig1};
 use halo2_base::halo2_proofs::{
-    arithmetic::FieldExt, circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Circuit, ConstraintSystem, Error}
+    circuit::{Layouter, SimpleFloorPlanner}, plonk::{Circuit, ConstraintSystem, Error}
 };
 use halo2_base::utils::PrimeField;
 use num_bigint::BigUint;
 use std::marker::PhantomData;
 
 use crate::timestamp::{TimestampCircuit, TimestampConfig};
-use crate::RSASignatureVerifier;
 use crate::conditional_secrets::{IdentityCircuit, IdentityConfig};
 use crate::signal::{SquareCircuit, SquareConfig};
 
-struct AadhaarQRVerifierCircuit<F: FieldExt, P: PrimeField> {
+struct AadhaarQRVerifierCircuit<F: PrimeField> {
     //extractor: ExtractAndPackAsIntCircuit,
-    hash_and_sign: RSASignatureVerifier<P>,
+    hash_and_sign: TestRSASignatureWithHashCircuit1<F>,
     cond_secrets: IdentityCircuit,
     timestamp: TimestampCircuit<F>,
     signal: SquareCircuit<F>,
 }
 
-impl<F: FieldExt, P:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F, P> {
-    type Config = (<RSASignatureVerifier<P> as Trait>::Config, 
-                    //RSASignatureVerifier<P>::Config,
-                    //<conditional_secrets::IdentityCircuit as Trait>::Config, 
+impl<F: PrimeField> AadhaarQRVerifierCircuit<F> {
+    pub fn new(
+        hash_and_sign: TestRSASignatureWithHashCircuit1<F>,
+        cond_secrets: IdentityCircuit,
+        timestamp: TimestampCircuit<F>,
+        signal: SquareCircuit<F>,
+    ) -> Self {
+        Self {
+            hash_and_sign,
+            cond_secrets,
+            timestamp,
+            signal,
+        }
+    }
+}
+
+impl<F:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F> {
+    type Config = (TestRSASignatureWithHashConfig1<F>, 
                     IdentityConfig,
-                    //<timestamp::TimestampCircuit<F> as Trait>::Config, 
                     TimestampConfig,
-                    //<signal::SquareCircuit<F> as Trait>::Config,
                     SquareConfig);
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -38,7 +49,7 @@ impl<F: FieldExt, P:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F, P> {
 
     fn configure(cs: &mut ConstraintSystem<F>) -> Self::Config {
         //let extractor = ExtractAndPackAsIntCircuit::configure(cs);
-        let hash_and_sign = RSASignatureVerifier::configure(cs);
+        let hash_and_sign = TestRSASignatureWithHashCircuit1::<F>::configure(cs);
         let cond_secrets = IdentityCircuit::configure(cs);
         let timestamp = TimestampCircuit::configure(cs);
         let signal = SquareCircuit::configure(cs);
@@ -48,15 +59,15 @@ impl<F: FieldExt, P:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F, P> {
 
     fn synthesize(
         &self,
-        cs: &mut impl Layouter<F>,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-        let (hash_and_sign_config, cond_secrets_config, timestamp_config, signal_config) = self.config();
 
         //self.extractor.synthesize(cs, extractor_config)?;
-        self.hash_and_sign.synthesize(cs, hash_and_sign_config)?;
-        self.cond_secrets.synthesize(cs, cond_secrets_config)?;
-        self.timestamp.synthesize(cs, timestamp_config)?;
-        self.signal.synthesize(cs, signal_config)?;
+        self.hash_and_sign.synthesize(config.0, layouter)?;
+        self.cond_secrets.synthesize(config.1, layouter)?;
+        self.timestamp.synthesize(config.2, layouter)?;
+        self.signal.synthesize(config.3, layouter)?;
 
         Ok(())
     }
@@ -74,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_aadhaar_qr_verifier_circuit() {
-        fn run<F: FieldExt, P: PrimeField>() {
+        fn run<F: PrimeField>() {
             // Extractor Subcircuit
             /*let n_delimited_data = vec![Some(5), Some(10), Some(15), Some(255), Some(1), Some(2)];
             let delimiter_indices = vec![Some(1), Some(2), Some(3)];
@@ -97,7 +108,7 @@ mod tests {
                 msg[i] = rng.gen();
             }
             let hashed_msg = Sha256::digest(&msg);
-            let hash_and_sign_circuit = RSASignatureVerifier::<F>::new {
+            let hash_and_sign_circuit = TestRSASignatureWithHashCircuit1::<F>::new {
                 private_key,
                 public_key,
                 msg: msg.to_vec(),
@@ -105,46 +116,43 @@ mod tests {
             };
             
             // Conditional Secrets Subcircuit
-            let cond_secrets_circuit = IdentityCircuit::new {
-                reveal_age_above_18: Some(true),
-                age_above_18: Some(1),
-                qr_data_age_above_18: Some(1),
-                reveal_gender: Some(true),
-                gender: Some(1),
-                qr_data_gender: Some(1),
-                reveal_pincode: Some(true),
-                pincode: Some(123456),
-                qr_data_pincode: Some(123456),
-                reveal_state: Some(true),
-                state: Some(1),
-                qr_data_state: Some(1),
-            };
+            let cond_secrets_circuit = IdentityCircuit::new(
+                Some(true),
+                Some(1),
+                Some(1),
+                Some(true),
+                Some(1),
+                Some(1),
+                Some(true),
+                Some(123456),
+                Some(123456),
+                Some(true),
+                Some(1),
+                Some(1));
 
             // Timestamp Subcircuit
-            let timestamp_circuit = TimestampCircuit::new {
-                year: Some(Fp::from(2023u64)),
-                month: Some(Fp::from(7u64)),
-                day: Some(Fp::from(8u64)),
-                hour: Some(Fp::from(12u64)),
-                minute: Some(Fp::from(34u64)),
-                second: Some(Fp::from(56u64)),
-            };
+            let timestamp_circuit = TimestampCircuit::<F>::new(Some(F::from(2023u64)),
+                Some(F::from(7u64)),
+                Some(F::from(8u64)),
+                Some(F::from(12u64)),
+                Some(F::from(34u64)),
+                Some(F::from(56u64)));
 
             // Signal Hash Subcircuit
             let signal_hash = 5;
-            let signal_circuit = SquareCircuit::<F>::new(Value::known(Fp::from(signal_hash)));
+            let signal_circuit = SquareCircuit::<F>::new(F::from(signal_hash));
             /*{
                 Value::known(Fp::from(signal_hash))
             };*/
 
             // Entire Aadhaar QR Verifier Circuit
-            let circuit = AadhaarQRVerifierCircuit {
+            let circuit = AadhaarQRVerifierCircuit::<F>::new(
                 //extractor: extractor_circuit,
-                hash_and_sign: hash_and_sign_circuit,
-                cond_secrets: cond_secrets_circuit,
-                timestamp: timestamp_circuit,
-                signal: signal_circuit,
-            };
+                hash_and_sign_circuit,
+                cond_secrets_circuit,
+                timestamp_circuit,
+                signal_circuit,
+            );
     
             // Verifying the RSA-SHA256 subcircuit
             let num_limbs = 2048 / 64;
@@ -172,11 +180,11 @@ mod tests {
             assert_eq!(prover.verify(), Ok(()));
 
             // Verifying the signal hash subcircuit
-            let public_inputs = vec![Fp::from(signal_hash * signal_hash)];
+            let public_inputs = vec![F::from(signal_hash * signal_hash)];
             let prover = MockProver::run(k, &signal_circuit, vec![public_inputs]).unwrap();
             prover.assert_satisfied();
 
         }
-        run::<FieldExt, Fr>();
+        run::<Fr>();
     }
 }

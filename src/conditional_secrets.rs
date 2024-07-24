@@ -1,7 +1,7 @@
-use halo2_base::halo2_proofs::arithmetic::FieldExt;
 use halo2_base::halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector, Expression};
 use halo2_base::halo2_proofs::poly::Rotation;
 use halo2_base::halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
+use halo2_base::utils::PrimeField;
 
 #[derive(Default)]
 pub struct IdentityCircuit {
@@ -36,7 +36,39 @@ pub struct IdentityConfig {
     s: Selector,
 }
 
-impl<F: FieldExt> Circuit<F> for IdentityCircuit {
+impl IdentityCircuit {
+    pub fn new(
+        reveal_age_above_18: Option<bool>,
+        age_above_18: Option<u8>,
+        qr_data_age_above_18: Option<u8>,
+        reveal_gender: Option<bool>,
+        gender: Option<u8>,
+        qr_data_gender: Option<u8>,
+        reveal_pincode: Option<bool>, 
+        pincode: Option<u32>,
+        qr_data_pincode: Option<u32>,
+        reveal_state: Option<bool>,
+        state: Option<u8>,
+        qr_data_state: Option<u8>,
+    ) -> Self {
+        Self {
+            reveal_age_above_18,
+            age_above_18,
+            qr_data_age_above_18,
+            reveal_gender,
+            gender,
+            qr_data_gender,
+            reveal_pincode, 
+            pincode,
+            qr_data_pincode,
+            reveal_state,
+            state,
+            qr_data_state,
+        }
+    }
+}
+
+impl<F: PrimeField> Circuit<F> for IdentityCircuit {
     type Config = IdentityConfig;
     type FloorPlanner = SimpleFloorPlanner;
 

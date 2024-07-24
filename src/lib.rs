@@ -8,7 +8,7 @@
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
 #![feature(stdsimd)]
 //#![feature(stdarch_x86_avx512)]
-
+#![feature(more_qualified_paths)]
 pub mod big_uint;
 pub use big_uint::*;
 use rsa::RsaPrivateKey;

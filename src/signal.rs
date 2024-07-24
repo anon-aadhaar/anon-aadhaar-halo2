@@ -1,6 +1,7 @@
 use halo2_base::halo2_proofs::{
-    arithmetic::FieldExt, circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation
+    circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation
 };
+use halo2_base::utils::PrimeField;
 
 #[derive(Clone, Debug)]
 pub struct SquareConfig {
@@ -9,11 +10,12 @@ pub struct SquareConfig {
     selector: Selector,
 }
 
-pub struct SquareCircuit<F: FieldExt> {
+#[derive(Default)]
+pub struct SquareCircuit<F: PrimeField> {
     signal_hash: Value<F>,
 }
 
-impl<F: FieldExt> Circuit<F> for SquareCircuit<F> {
+impl<F: PrimeField> Circuit<F> for SquareCircuit<F> {
     type Config = SquareConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -74,6 +76,14 @@ impl<F: FieldExt> Circuit<F> for SquareCircuit<F> {
                 Ok(())
             },
         )
+    }
+}
+
+impl<F: PrimeField> SquareCircuit<F> {
+    pub fn new(signal_hash: F) -> Self {
+        Self {
+            signal_hash: Value::known(signal_hash),
+        }
     }
 }
 
