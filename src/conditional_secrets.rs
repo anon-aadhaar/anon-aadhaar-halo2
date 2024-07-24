@@ -3,7 +3,7 @@ use halo2_base::halo2_proofs::poly::Rotation;
 use halo2_base::halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_base::utils::PrimeField;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct IdentityCircuit {
     reveal_age_above_18: Option<bool>,
     age_above_18: Option<u8>,

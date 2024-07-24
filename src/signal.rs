@@ -10,7 +10,7 @@ pub struct SquareConfig {
     selector: Selector,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SquareCircuit<F: PrimeField> {
     signal_hash: Value<F>,
 }

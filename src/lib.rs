@@ -263,7 +263,7 @@ struct TestRSASignatureWithHashConfig1<F: PrimeField> {
     n_instance: Column<Instance>,
     hash_instance: Column<Instance>,
 }
-
+#[derive(Debug, Clone)]
 struct TestRSASignatureWithHashCircuit1<F: PrimeField> {
     private_key: RsaPrivateKey,
     public_key: RsaPublicKey,
@@ -282,6 +282,21 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
     const LOOKUP_BITS: usize = 12;
     const SHA256_LOOKUP_BITS: usize = 8;
     const SHA256_LOOKUP_ADVICE: usize = 8;
+}
+
+impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
+    pub fn new(
+        private_key: RsaPrivateKey,
+        public_key: RsaPublicKey,
+        msg: Vec<u8>,
+    ) -> Self {
+        Self {
+            private_key,
+            public_key,
+            msg,
+            _f: PhantomData,
+        }
+    }
 }
 
 impl<F: PrimeField> Circuit<F> for TestRSASignatureWithHashCircuit1<F> {

@@ -6,12 +6,12 @@ use halo2_base::halo2_proofs::{
 };
 use halo2_base::utils::PrimeField;
 use num_bigint::BigUint;
-use std::marker::PhantomData;
 
 use crate::timestamp::{TimestampCircuit, TimestampConfig};
 use crate::conditional_secrets::{IdentityCircuit, IdentityConfig};
 use crate::signal::{SquareCircuit, SquareConfig};
 
+#[derive(Clone)]
 struct AadhaarQRVerifierCircuit<F: PrimeField> {
     //extractor: ExtractAndPackAsIntCircuit,
     hash_and_sign: TestRSASignatureWithHashCircuit1<F>,
@@ -62,7 +62,6 @@ impl<F:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F> {
         config: Self::Config,
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-
         //self.extractor.synthesize(cs, extractor_config)?;
         self.hash_and_sign.synthesize(config.0, layouter)?;
         self.cond_secrets.synthesize(config.1, layouter)?;
@@ -108,12 +107,12 @@ mod tests {
                 msg[i] = rng.gen();
             }
             let hashed_msg = Sha256::digest(&msg);
-            let hash_and_sign_circuit = TestRSASignatureWithHashCircuit1::<F>::new {
+            let hash_and_sign_circuit = TestRSASignatureWithHashCircuit1::<F>::new(
                 private_key,
                 public_key,
-                msg: msg.to_vec(),
-                _f: PhantomData,
-            };
+                msg.to_vec(),
+                //_f: PhantomData,
+            );
             
             // Conditional Secrets Subcircuit
             let cond_secrets_circuit = IdentityCircuit::new(
@@ -141,17 +140,14 @@ mod tests {
             // Signal Hash Subcircuit
             let signal_hash = 5;
             let signal_circuit = SquareCircuit::<F>::new(F::from(signal_hash));
-            /*{
-                Value::known(Fp::from(signal_hash))
-            };*/
 
             // Entire Aadhaar QR Verifier Circuit
-            let circuit = AadhaarQRVerifierCircuit::<F>::new(
+            let _circuit = AadhaarQRVerifierCircuit::<F>::new(
                 //extractor: extractor_circuit,
-                hash_and_sign_circuit,
-                cond_secrets_circuit,
-                timestamp_circuit,
-                signal_circuit,
+                hash_and_sign_circuit.clone(),
+                cond_secrets_circuit.clone(),
+                timestamp_circuit.clone(),
+                signal_circuit.clone(),
             );
     
             // Verifying the RSA-SHA256 subcircuit
@@ -164,24 +160,24 @@ mod tests {
                 .collect::<Vec<F>>();
             let public_inputs = vec![n_fes, hash_fes];
             let k = 15;
-            let prover = match MockProver::run(k, &hash_and_sign_circuit, public_inputs) {
+            let prover = match MockProver::run(k, &hash_and_sign_circuit.clone(), public_inputs) {
                 Ok(prover) => prover,
                 Err(e) => panic!("{:#?}", e),
             };
             prover.verify().unwrap();
 
             // Verifying the conditional secrets subcircuit
-            let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit, vec![]).unwrap();
+            let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
             assert!(prover.verify().is_ok());
 
             // Verifying the timestamp subcircuit
             let public_inputs = vec![];
-            let prover = MockProver::run(k, &timestamp_circuit, public_inputs).unwrap();
+            let prover = MockProver::run(k, &timestamp_circuit.clone(), public_inputs).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
             // Verifying the signal hash subcircuit
             let public_inputs = vec![F::from(signal_hash * signal_hash)];
-            let prover = MockProver::run(k, &signal_circuit, vec![public_inputs]).unwrap();
+            let prover = MockProver::run(k, &signal_circuit.clone(), vec![public_inputs]).unwrap();
             prover.assert_satisfied();
 
         }
