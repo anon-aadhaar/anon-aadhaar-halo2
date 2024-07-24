@@ -34,11 +34,12 @@ use rsa::{
     RsaPublicKey,
 };
 
+mod qr_data_extractor;
 mod aadhaar_verifier_circuit;
 pub mod timestamp;
 pub mod conditional_secrets;
 pub mod signal;
-mod extractors{
+/*mod extractors{
     pub mod extractor;
     pub mod timstamp_extractor;
     pub mod age_extractor;
@@ -46,7 +47,7 @@ mod extractors{
     pub mod pincode_extractor;
     pub mod photo_extractor;
     pub mod qrdata_extractor;
-}
+}*/
 
 mod chip;
 mod instructions;

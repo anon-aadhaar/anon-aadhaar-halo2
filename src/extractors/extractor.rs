@@ -1,4 +1,4 @@
-/*use halo2_base::{
+use halo2_base::{
     arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
     dev::MockProver,
@@ -162,21 +162,29 @@ impl<F: FieldExt> Circuit<F> for ExtractAndPackAsIntCircuit<F> {
     }
 }
 
-fn main() {
-    let k = 4;
-    let n_delimited_data = vec![Some(5), Some(10), Some(15), Some(255), Some(1), Some(2)];
-    let delimiter_indices = vec![Some(1), Some(2), Some(3)];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use halo2_base::halo2_proofs::{dev::MockProver, circuit::Value};
+    use std::marker::PhantomData;
 
-    let circuit = ExtractAndPackAsIntCircuit {
-        n_delimited_data: n_delimited_data.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
-        delimiter_indices: delimiter_indices.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
-        extract_position: 1, // Example value
-        extract_max_length: 31, // Example value
-        _marker: PhantomData,
-    };
+    #[test]
+    fn test_extractor() {
+        let k = 4;
+        let n_delimited_data = vec![Some(5), Some(10), Some(15), Some(255), Some(1), Some(2)];
+        let delimiter_indices = vec![Some(1), Some(2), Some(3)];
 
-    let public_inputs = vec![Some(5).into()]; // Example
+        let circuit = ExtractAndPackAsIntCircuit {
+            n_delimited_data: n_delimited_data.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
+            delimiter_indices: delimiter_indices.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
+            extract_position: 1, // Example value
+            extract_max_length: 31, // Example value
+            _marker: PhantomData,
+        };
 
-    let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
-    prover.assert_satisfied();
-}*/
+        let public_inputs = vec![Some(5).into()]; // Example
+
+        let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
+        prover.assert_satisfied();
+    }
+}
