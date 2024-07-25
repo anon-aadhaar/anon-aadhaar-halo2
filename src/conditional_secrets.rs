@@ -2,6 +2,7 @@ use halo2_base::halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem,
 use halo2_base::halo2_proofs::poly::Rotation;
 use halo2_base::halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_base::utils::PrimeField;
+//use std::sync::Arc;
 
 #[derive(Default, Clone)]
 pub struct IdentityCircuit {

@@ -10,6 +10,7 @@ use num_bigint::BigUint;
 use crate::timestamp::{TimestampCircuit, TimestampConfig};
 use crate::conditional_secrets::{IdentityCircuit, IdentityConfig};
 use crate::signal::{SquareCircuit, SquareConfig};
+//use std::sync::Arc;
 
 #[derive(Clone)]
 struct AadhaarQRVerifierCircuit<F: PrimeField> {
@@ -18,6 +19,7 @@ struct AadhaarQRVerifierCircuit<F: PrimeField> {
     cond_secrets: IdentityCircuit,
     timestamp: TimestampCircuit<F>,
     signal: SquareCircuit<F>,
+    //layouter: impl Layouter<F>
 }
 
 impl<F: PrimeField> AadhaarQRVerifierCircuit<F> {

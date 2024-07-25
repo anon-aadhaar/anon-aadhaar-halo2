@@ -2,6 +2,7 @@ use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation
 };
 use halo2_base::utils::PrimeField;
+//use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct SquareConfig {

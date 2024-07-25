@@ -1,13 +1,13 @@
 use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    plonk::{Circuit, ConstraintSystem, Error, Column, Instance, Advice},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance},
     //poly::Rotation,
 };
 
 use halo2_base::utils::PrimeField;
 
 #[derive(Clone)]
-struct AadhaarQRVerifierConfig {
+pub struct AadhaarQRVerifierConfig {
     qr_data_padded: Column<Advice>,
     qr_data_padded_length: Column<Advice>,
     delimiter_indices: Column<Advice>,
@@ -171,29 +171,6 @@ impl <F: PrimeField> Circuit<F> for  AadhaarQRVerifierCircuit<F> {
                     config.reveal_state,
                     0,
                     || Value::known(self.reveal_state.unwrap_or(F::from(1)))
-                )?;
-
-                region.assign_advice_from_instance(
-                    || "nullifier_seed", 
-                    config.nullifier_seed, 
-                    0, 
-                    || Value::known(self.nullifier_seed.unwrap_or(F::from(1))), 
-                    0);
-                // Assign public inputs
-                /*region.assign_instance_(
-                    || "nullifier_seed",
-                    config.nullifier_seed,
-                    0,
-                    //|| Value::known(self.nullifier_seed.ok_or(Error::Synthesis)?),
-                    || Value::known(self.nullifier_seed.unwrap_or(F::from(1)))
-                )?;*/
-                
-                region.assign_instance(
-                    || "signal_hash",
-                    config.signal_hash,
-                    0,
-                    //|| Value::known(self.signal_hash.ok_or(Error::Synthesis)?),
-                    || Value::known(self.signal_hash.unwrap_or(F::from(1)))
                 )?;
 
                 Ok(())
