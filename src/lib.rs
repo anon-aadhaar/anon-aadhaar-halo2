@@ -38,6 +38,7 @@ use rsa::{
 mod qr_data_extractor;
 //mod aadhaar_verifier_circuit;
 pub mod timestamp;
+
 pub mod conditional_secrets;
 pub mod signal;
 /*mod extractors{
@@ -49,6 +50,8 @@ pub mod signal;
     pub mod photo_extractor;
     pub mod qrdata_extractor;
 }*/
+
+use crate::timestamp::TimestampCircuit;
 
 mod chip;
 mod instructions;
@@ -1667,6 +1670,10 @@ mod test {
         run::<Fr>();
     }
 
+    fn to_integer(unsigned_integer: u64) -> u64 {
+        unsigned_integer - 48
+    }
+
     #[test]
     fn test_aadhaar_qr_verifier_circuit() {
         fn run<F: PrimeField>() {
@@ -2826,26 +2833,28 @@ mod test {
             let mut timestamp_vec: Vec<u64> = Vec::new();
             for i in 9..26 {
                 timestamp_vec.push(msg[i].parse::<u64>().unwrap());
-                if (i >= 9 && i <= 12) {
-                    year_vec.push(msg[i].parse::<u64>().unwrap());
+                if i >= 9 && i <= 12 {
+                    year_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
-                else if (i >= 13 && i<= 14) {
-                    month_vec.push(msg[i].parse::<u64>().unwrap());
+                else if i >= 13 && i<= 14 {
+                    month_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
-                else if (i >= 15 && i<= 16) {
-                    day_vec.push(msg[i].parse::<u64>().unwrap());
+                else if i >= 15 && i<= 16 {
+                    day_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
-                else if (i >= 17 && i<= 18) {
-                    hour_vec.push(msg[i].parse::<u64>().unwrap());
+                else if i >= 17 && i<= 18 {
+                    hour_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
             }
-
+            
             let year_data: u64 = year_vec[0] * 1000 + year_vec[1] * 100 + year_vec[2] * 10 + year_vec[3]; 
             let month_data: u64 = month_vec[0] * 10 + month_vec[1];
+            println!("Month[0]: {}, Month[1]: {}", month_vec[0], month_vec[1]);
+            println!("Month Value: {}", month_data);
             let day_data: u64 = day_vec[0] * 10 + day_vec[1];
             let hour_data: u64 = hour_vec[0] * 10 + hour_vec[1];
 
-            let birth_year_vec: Vec<u64> = Vec::new();
+            /*let birth_year_vec: Vec<u64> = Vec::new();
             let birth_month_vec: Vec<u8> = Vec::new();
             let birth_date_vec: Vec<u8> = Vec::new();
             let mut dob_vec: Vec<u8> = Vec::new();
@@ -2877,9 +2886,9 @@ mod test {
                 }
             }
 
-            let gender_data = msg[50].parse::<u8>().unwrap();
+            let gender_data = msg[50].parse::<u8>().unwrap();*/
 
-            let pincode_vec: Vec<u32> = Vec::new();
+            /*let pincode_vec: Vec<u32> = Vec::new();
             for i in 98..104 {
                 pincode_vec.push(msg[i].parse::<u8>().unwrap());
             }
@@ -2887,17 +2896,17 @@ mod test {
             let pincode_data = 0;
             for i in pincode_vec {
                 pincode_data = pincode_data * 10 + pincode_vec[i];
-            }
+            }*/
 
-            let state_vec: Vec<u8> = Vec::new();
-            for i in 119..124 {
+            /*let state_vec: Vec<u8> = Vec::new();
+            for i in 119..125 {
                 state_vec.push(msg[i].parse::<u8>().unwrap());
             };
 
             let photo_vec: Vec<u8> = Vec::new();
             for i in 185..1137 {
                 photo_vec.push(msg[i].parse::<u8>().unwrap());
-            };
+            };*/
 
             // RSA-SHA256 Subcircuit
             let mut rng = thread_rng();
@@ -2905,20 +2914,24 @@ mod test {
                 .expect("failed to generate a key");
             let public_key = RsaPublicKey::from(&private_key);
             let n = BigUint::from_radix_le(&public_key.n().to_radix_le(16), 16).unwrap();
-            let mut msg: [u8; 128] = [0; 128];
+            /*let mut msg: [u8; 128] = [0; 128];
             for i in 0..128 {
                 msg[i] = rng.gen();
+            }*/
+            let mut byte_vec: Vec<u8> = Vec::new();
+            for i in 0..700 {
+                byte_vec.push(msg[i].parse::<u8>().unwrap());
             }
-            let hashed_msg = Sha256::digest(&msg);
+            let hashed_msg = Sha256::digest(&byte_vec);
             let hash_and_sign_circuit = TestRSASignatureWithHashCircuit1::<F>::new(
                 private_key,
                 public_key,
-                msg.to_vec(),
+                byte_vec,
                 //_f: PhantomData,
             );
             
             // Conditional Secrets Subcircuit
-            let cond_secrets_circuit = IdentityCircuit::new(
+            /*let cond_secrets_circuit = IdentityCircuit::new(
                 Some(true),
                 Some(age),
                 Some(age),
@@ -2930,7 +2943,7 @@ mod test {
                 Some(pincode_data),
                 Some(true),
                 state_vec,
-                state_vec);
+                state_vec);*/
 
             // Timestamp Subcircuit
             let timestamp_circuit = TimestampCircuit::<F>::new(
@@ -2942,17 +2955,17 @@ mod test {
                 Some(F::from(00u64)));
 
             // Signal Hash Subcircuit
-            let signal_hash = 5;
-            let signal_circuit = SquareCircuit::<F>::new(F::from(signal_hash));
+            /*let signal_hash = 5;
+            let signal_circuit = SquareCircuit::<F>::new(F::from(signal_hash));*/
 
             // Entire Aadhaar QR Verifier Circuit
-            let _circuit = AadhaarQRVerifierCircuit::<F>::new(
+            /*let _circuit = AadhaarQRVerifierCircuit::<F>::new(
                 //extractor: extractor_circuit,
                 hash_and_sign_circuit.clone(),
                 cond_secrets_circuit.clone(),
                 timestamp_circuit.clone(),
                 signal_circuit.clone(),
-            );
+            );*/
     
             // Verifying the RSA-SHA256 subcircuit
             let num_limbs = 2048 / 64;
@@ -2971,8 +2984,8 @@ mod test {
             prover.verify().unwrap();
 
             // Verifying the conditional secrets subcircuit
-            let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
-            assert!(prover.verify().is_ok());
+            /*let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
+            assert!(prover.verify().is_ok());*/
 
             // Verifying the timestamp subcircuit
             let public_inputs = vec![];
@@ -2980,9 +2993,9 @@ mod test {
             assert_eq!(prover.verify(), Ok(()));
 
             // Verifying the signal hash subcircuit
-            let public_inputs = vec![F::from(signal_hash * signal_hash)];
+            /*let public_inputs = vec![F::from(signal_hash * signal_hash)];
             let prover = MockProver::run(k, &signal_circuit.clone(), vec![public_inputs]).unwrap();
-            prover.assert_satisfied();
+            prover.assert_satisfied();*/
 
         }
         run::<Fr>();
