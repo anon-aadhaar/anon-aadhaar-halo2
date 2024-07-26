@@ -39,7 +39,7 @@ mod qr_data_extractor;
 //mod aadhaar_verifier_circuit;
 pub mod timestamp;
 
-//pub mod conditional_secrets;
+pub mod conditional_secrets;
 pub mod signal;
 /*mod extractors{
     pub mod extractor;
@@ -52,7 +52,7 @@ pub mod signal;
 }*/
 
 use crate::timestamp::TimestampCircuit;
-//use crate::conditional_secrets::IdentityCircuit;
+use crate::conditional_secrets::IdentityCircuit;
 use crate::signal::SquareCircuit;
 
 mod chip;
@@ -421,11 +421,9 @@ impl<F: PrimeField> Circuit<F> for TestRSASignatureWithHashCircuit1<F> {
 #[cfg(feature = "sha256")]
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use super::*;
     use crate::big_uint::decompose_biguint;
-    use halo2_base::{halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr}, utils::biguint_to_fe};
+    use halo2_base::halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr};
     use rand::{thread_rng, Rng};
     use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
     use sha2::{Digest, Sha256};
@@ -2844,12 +2842,10 @@ mod test {
             
             let year_data: u64 = year_vec[0] * 1000 + year_vec[1] * 100 + year_vec[2] * 10 + year_vec[3]; 
             let month_data: u64 = month_vec[0] * 10 + month_vec[1];
-            println!("Month[0]: {}, Month[1]: {}", month_vec[0], month_vec[1]);
-            println!("Month Value: {}", month_data);
             let day_data: u64 = day_vec[0] * 10 + day_vec[1];
             let hour_data: u64 = hour_vec[0] * 10 + hour_vec[1];
 
-            /*let birth_year_vec: Vec<u64> = Vec::new();
+            let birth_year_vec: Vec<u64> = Vec::new();
             let birth_month_vec: Vec<u64> = Vec::new();
             let birth_date_vec: Vec<u64> = Vec::new();
             let mut dob_vec: Vec<u8> = Vec::new();
@@ -2870,8 +2866,8 @@ mod test {
             let birth_month_data = birth_month_vec[0] * 10 + birth_month_vec[1];
             let birth_year_data = birth_year_vec[0] * 1000 + birth_year_vec[1] * 100 + birth_year_vec[2] * 10 + birth_year_vec[3];
 
-            let age_by_year: u64 = year_data - birth_date_data - 1;
-            let age: u64 = age_by_year;
+            let age_by_year: u8 = year_data - birth_date_data - 1;
+            let age: u8 = age_by_year;
             if birth_month_data > month_data {
                 age += 1;
             }
@@ -2890,13 +2886,13 @@ mod test {
 
             let pincode_data = 0;
             for i in pincode_vec {
-                pincode_data = pincode_data * 10 + pincode_vec[i];
+                pincode_data = pincode_data * 10 + i;
             }
 
             let state_vec: Vec<u8> = Vec::new();
             for i in 119..125 {
                 state_vec.push(msg[i].parse::<u8>().unwrap());
-            };*/
+            };
 
             /*let photo_vec: Vec<u8> = Vec::new();
             for i in 185..1137 {
@@ -2921,7 +2917,7 @@ mod test {
             );
             
             // Conditional Secrets Subcircuit
-            /*let cond_secrets_circuit = IdentityCircuit::new(
+            let cond_secrets_circuit = IdentityCircuit::new(
                 Some(true),
                 Some(age),
                 Some(age),
@@ -2933,7 +2929,7 @@ mod test {
                 Some(pincode_data),
                 Some(true),
                 Some(state_vec),
-                Some(state_vec));*/
+                Some(state_vec));
 
             // Timestamp Subcircuit
             let timestamp_circuit = TimestampCircuit::<F>::new(
@@ -2976,8 +2972,8 @@ mod test {
             prover.verify().unwrap();
 
             // Verifying the conditional secrets subcircuit
-            /*let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
-            assert!(prover.verify().is_ok());*/
+            let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
+            assert!(prover.verify().is_ok());
 
             // Verifying the timestamp subcircuit
             let public_inputs = vec![];

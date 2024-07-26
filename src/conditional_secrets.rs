@@ -16,8 +16,8 @@ pub struct IdentityCircuit {
     pincode: Option<u32>,
     qr_data_pincode: Option<u32>,
     reveal_state: Option<bool>,
-    state: Option<Vec<u64>>,
-    qr_data_state: Option<Vec<u64>>,
+    state: Option<Vec<u8>>,
+    qr_data_state: Option<Vec<u8>>,
 }
 
 #[derive(Clone)]
@@ -49,8 +49,8 @@ impl IdentityCircuit {
         pincode: Option<u32>,
         qr_data_pincode: Option<u32>,
         reveal_state: Option<bool>,
-        state: Option<Vec<u64>>,
-        qr_data_state: Option<Vec<u64>>,
+        state: Option<Vec<u8>>,
+        qr_data_state: Option<Vec<u8>>,
     ) -> Self {
         Self {
             reveal_age_above_18,
@@ -150,39 +150,23 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
             vec![s * reveal_state.clone() * (reveal_state - Expression::Constant(F::one()))]
         });
 
-        /*meta.create_gate("state assignment", |meta| {
-            let s = meta.query_selector(s);
-            let state = meta.query_advice(state, Rotation::cur());
-            let qr_data_state = meta.query_advice(qr_data_state, Rotation::cur());
-            vec![
-                s * (state - qr_data_state)
-            ]
-        });*/
-
-       /*meta.create_gate("state assignment", |meta| {
-            let s = meta.query_selector(s);
-            let mut constraints = vec![];
-            for (i, (state_col, qr_data_state_col)) in state.iter().zip(qr_data_state.iter()).enumerate() {
-                let state = meta.query_advice(*state_col, Rotation(i as i32));
-                let qr_data_state = meta.query_advice(*qr_data_state_col, Rotation(i as i32));
-                constraints.push(s.clone() * (state - qr_data_state));
-            }
-            constraints
-        });*/
-
         meta.create_gate("state assignment", |meta| {
             let s = meta.query_selector(s);
-            let mut constraints = vec![];
-            let mut states = vec![];
-            let mut qr_states = vec![];
+            let mut constraints = Vec::with_capacity(5);
+            let mut states = Vec::with_capacity(5);
+            let mut qr_states = Vec::with_capacity(5);
             for i in 0..5 {
                 states.push(meta.query_advice(state.clone()[i], Rotation::cur()));
             }
             for i in 0..5 {
                 qr_states.push(meta.query_advice(qr_data_state.clone()[i], Rotation::cur()));
             }
+            let st = states.clone();
+            let qrs = qr_states.clone();
             for i in 0..5 {
-                constraints.push(s.clone() * (states[i] - qr_states[i]));
+                let a = st.get(i).unwrap().clone();
+                let b = qrs.get(i).unwrap().clone();
+                constraints.push(s.clone() * (a - b));
             }
             constraints
         });
@@ -281,20 +265,6 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
                     || Value::known(F::from(self.reveal_state.unwrap_or(false) as u64))
                 )?;
 
-                /*region.assign_advice(
-                    || "state",
-                    config.state,
-                    0,
-                    || Value::known(F::from(self.state.unwrap_or(0) as u64))
-                )?;
-
-                region.assign_advice(
-                    || "qr_data_state",
-                    config.qr_data_state,
-                    0,
-                    || Value::known(F::from(self.qr_data_state.unwrap_or(0) as u64))
-                )?;*/
-
                 if let Some(state) = &self.state {
                     for (i, &byte) in state.iter().enumerate() {
                         region.assign_advice(
@@ -305,24 +275,6 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
                         )?;
                     }
                 }
-
-                /*for i in 0..5 {
-                    region.assign_advice(
-                        || format!("state_{}", i),
-                        config.state[i],
-                        0,
-                        || Value::known(F::from(self.state[i].unwrap_or(0) as u64))
-                    )?;
-                }
-
-                for i in 0..5 {
-                    region.assign_advice(
-                        || format!("qr_data_state_{}", i),
-                        config.qr_data_state[i],
-                        0,
-                        || Value::known(F::from(self.qr_data_state[i].unwrap_or(0) as u64))
-                    )?;
-                }*/
 
                 if let Some(qr_data_state) = &self.qr_data_state {
                     for (i, &byte) in qr_data_state.iter().enumerate() {
