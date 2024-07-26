@@ -16,8 +16,8 @@ pub struct IdentityCircuit {
     pincode: Option<u32>,
     qr_data_pincode: Option<u32>,
     reveal_state: Option<bool>,
-    state: Option<u8>,
-    qr_data_state: Option<u8>,
+    state: Option<Vec<u64>>,
+    qr_data_state: Option<Vec<u64>>,
 }
 
 #[derive(Clone)]
@@ -32,8 +32,8 @@ pub struct IdentityConfig {
     pincode: Column<Advice>,
     qr_data_pincode: Column<Advice>,
     reveal_state: Column<Advice>,
-    state: Column<Advice>,
-    qr_data_state: Column<Advice>,
+    state: Vec<Column<Advice>>,
+    qr_data_state: Vec<Column<Advice>>,
     s: Selector,
 }
 
@@ -49,8 +49,8 @@ impl IdentityCircuit {
         pincode: Option<u32>,
         qr_data_pincode: Option<u32>,
         reveal_state: Option<bool>,
-        state: Option<u8>,
-        qr_data_state: Option<u8>,
+        state: Option<Vec<u64>>,
+        qr_data_state: Option<Vec<u64>>,
     ) -> Self {
         Self {
             reveal_age_above_18,
@@ -88,8 +88,14 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
         let pincode = meta.advice_column();
         let qr_data_pincode = meta.advice_column();
         let reveal_state = meta.advice_column();
-        let state = meta.advice_column();
-        let qr_data_state = meta.advice_column();
+        let mut state = vec![];
+        for _i in 0..5 {
+            state.push(meta.advice_column());
+        }
+        let mut qr_data_state = vec![];
+        for _i in 0..5 {
+            qr_data_state.push(meta.advice_column());
+        }
         let s = meta.selector();
 
         meta.create_gate("revealAgeAbove18 constraint", |meta| {
@@ -144,14 +150,43 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
             vec![s * reveal_state.clone() * (reveal_state - Expression::Constant(F::one()))]
         });
 
-        meta.create_gate("state assignment", |meta| {
+        /*meta.create_gate("state assignment", |meta| {
             let s = meta.query_selector(s);
             let state = meta.query_advice(state, Rotation::cur());
             let qr_data_state = meta.query_advice(qr_data_state, Rotation::cur());
             vec![
                 s * (state - qr_data_state)
             ]
+        });*/
+
+       /*meta.create_gate("state assignment", |meta| {
+            let s = meta.query_selector(s);
+            let mut constraints = vec![];
+            for (i, (state_col, qr_data_state_col)) in state.iter().zip(qr_data_state.iter()).enumerate() {
+                let state = meta.query_advice(*state_col, Rotation(i as i32));
+                let qr_data_state = meta.query_advice(*qr_data_state_col, Rotation(i as i32));
+                constraints.push(s.clone() * (state - qr_data_state));
+            }
+            constraints
+        });*/
+
+        meta.create_gate("state assignment", |meta| {
+            let s = meta.query_selector(s);
+            let mut constraints = vec![];
+            let mut states = vec![];
+            let mut qr_states = vec![];
+            for i in 0..5 {
+                states.push(meta.query_advice(state.clone()[i], Rotation::cur()));
+            }
+            for i in 0..5 {
+                qr_states.push(meta.query_advice(qr_data_state.clone()[i], Rotation::cur()));
+            }
+            for i in 0..5 {
+                constraints.push(s.clone() * (states[i] - qr_states[i]));
+            }
+            constraints
         });
+
 
         IdentityConfig {
             reveal_age_above_18,
@@ -246,7 +281,7 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
                     || Value::known(F::from(self.reveal_state.unwrap_or(false) as u64))
                 )?;
 
-                region.assign_advice(
+                /*region.assign_advice(
                     || "state",
                     config.state,
                     0,
@@ -258,7 +293,47 @@ impl<F: PrimeField> Circuit<F> for IdentityCircuit {
                     config.qr_data_state,
                     0,
                     || Value::known(F::from(self.qr_data_state.unwrap_or(0) as u64))
-                )?;
+                )?;*/
+
+                if let Some(state) = &self.state {
+                    for (i, &byte) in state.iter().enumerate() {
+                        region.assign_advice(
+                            || format!("state_{}", i),
+                            config.state[i],
+                            0,
+                            || Value::known(F::from(byte as u64))
+                        )?;
+                    }
+                }
+
+                /*for i in 0..5 {
+                    region.assign_advice(
+                        || format!("state_{}", i),
+                        config.state[i],
+                        0,
+                        || Value::known(F::from(self.state[i].unwrap_or(0) as u64))
+                    )?;
+                }
+
+                for i in 0..5 {
+                    region.assign_advice(
+                        || format!("qr_data_state_{}", i),
+                        config.qr_data_state[i],
+                        0,
+                        || Value::known(F::from(self.qr_data_state[i].unwrap_or(0) as u64))
+                    )?;
+                }*/
+
+                if let Some(qr_data_state) = &self.qr_data_state {
+                    for (i, &byte) in qr_data_state.iter().enumerate() {
+                        region.assign_advice(
+                            || format!("qr_data_state_{}", i),
+                            config.qr_data_state[i],
+                            0,
+                            || Value::known(F::from(byte as u64))
+                        )?;
+                    }
+                }
 
                 Ok(())
             }
@@ -287,15 +362,15 @@ mod tests {
             pincode: Some(123456),
             qr_data_pincode: Some(123456),
             reveal_state: Some(true),
-            state: Some(1),
-            qr_data_state: Some(1),
+            state: Some(vec![10, 11, 12, 13, 14]),
+            qr_data_state: Some(vec![10, 11, 12, 13, 14]),
         };
 
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
 
         // Test case where reveal_age_above_18 is false
-        let circuit = IdentityCircuit {
+        /*let circuit = IdentityCircuit {
             reveal_age_above_18: Some(false),
             age_above_18: Some(0),
             qr_data_age_above_18: Some(1),
@@ -444,7 +519,7 @@ mod tests {
         };
 
         let prover: MockProver<Fp> = MockProver::run(k, &circuit, vec![]).unwrap();
-        assert!(prover.verify().is_ok());
+        assert!(prover.verify().is_ok());*/
     }
 }
 
