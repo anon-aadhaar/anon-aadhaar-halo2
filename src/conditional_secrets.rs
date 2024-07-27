@@ -7,8 +7,8 @@ use halo2_base::utils::PrimeField;
 #[derive(Default, Clone)]
 pub struct IdentityCircuit {
     reveal_age_above_18: Option<bool>,
-    age_above_18: Option<u8>,
-    qr_data_age_above_18: Option<u8>,
+    age_above_18: Option<u64>,
+    qr_data_age_above_18: Option<u64>,
     reveal_gender: Option<bool>,
     gender: Option<u8>,
     qr_data_gender: Option<u8>,
@@ -40,8 +40,8 @@ pub struct IdentityConfig {
 impl IdentityCircuit {
     pub fn new(
         reveal_age_above_18: Option<bool>,
-        age_above_18: Option<u8>,
-        qr_data_age_above_18: Option<u8>,
+        age_above_18: Option<u64>,
+        qr_data_age_above_18: Option<u64>,
         reveal_gender: Option<bool>,
         gender: Option<u8>,
         qr_data_gender: Option<u8>,

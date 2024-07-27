@@ -1677,6 +1677,10 @@ mod test {
         unsigned_integer - 48
     }
 
+    fn to_integer_small(unsigned_integer: u32) -> u32 {
+        unsigned_integer - 48
+    }
+
     #[test]
     fn test_aadhaar_qr_verifier_circuit() {
         fn run<F: PrimeField>() {
@@ -2845,29 +2849,30 @@ mod test {
             let day_data: u64 = day_vec[0] * 10 + day_vec[1];
             let hour_data: u64 = hour_vec[0] * 10 + hour_vec[1];
 
-            let birth_year_vec: Vec<u64> = Vec::new();
-            let birth_month_vec: Vec<u64> = Vec::new();
-            let birth_date_vec: Vec<u64> = Vec::new();
-            let mut dob_vec: Vec<u8> = Vec::new();
+            let mut birth_year_vec: Vec<u64> = Vec::new();
+            let mut birth_month_vec: Vec<u64> = Vec::new();
+            let mut birth_date_vec: Vec<u64> = Vec::new();
+            let mut dob_vec: Vec<u64> = Vec::new();
             for i in 39..49 {
-                dob_vec.push(msg[i].parse::<u8>().unwrap());
+                dob_vec.push(msg[i].parse::<u64>().unwrap());
                 if i >= 39 && i <= 40 {
-                    birth_date_vec.push(msg[i].parse::<u64>().unwrap());
+                    birth_date_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
                 else if i >= 42 && i <= 43 {
-                    birth_month_vec.push(msg[i].parse::<u64>().unwrap());
+                    birth_month_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
                 else if i >= 45 && i <= 48 {
-                    birth_year_vec.push(msg[i].parse::<u64>().unwrap());
+                    birth_year_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
                 }
             }
 
             let birth_date_data = birth_date_vec[0] * 10 + birth_date_vec[1];
             let birth_month_data = birth_month_vec[0] * 10 + birth_month_vec[1];
             let birth_year_data = birth_year_vec[0] * 1000 + birth_year_vec[1] * 100 + birth_year_vec[2] * 10 + birth_year_vec[3];
-
-            let age_by_year: u8 = year_data - birth_date_data - 1;
-            let age: u8 = age_by_year;
+            println!("Birth year data : {birth_year_data}");
+            println!("Year data: {year_data}");
+            let age_by_year: u64 = year_data - birth_year_data - 1;
+            let mut age: u64 = age_by_year;
             if birth_month_data > month_data {
                 age += 1;
             }
@@ -2879,18 +2884,18 @@ mod test {
 
             let gender_data = msg[50].parse::<u8>().unwrap();
 
-            let pincode_vec: Vec<u64> = Vec::new();
+            let mut pincode_vec: Vec<u32> = Vec::new();
             for i in 98..104 {
-                pincode_vec.push(to_integer(msg[i].parse::<u64>().unwrap()));
+                pincode_vec.push(to_integer_small(msg[i].parse::<u32>().unwrap()));
             }
 
-            let pincode_data = 0;
+            let mut pincode_data = 0;
             for i in pincode_vec {
                 pincode_data = pincode_data * 10 + i;
             }
 
-            let state_vec: Vec<u8> = Vec::new();
-            for i in 119..125 {
+            let mut state_vec: Vec<u8> = Vec::new();
+            for i in 119..124 {
                 state_vec.push(msg[i].parse::<u8>().unwrap());
             };
 
@@ -2928,7 +2933,7 @@ mod test {
                 Some(pincode_data),
                 Some(pincode_data),
                 Some(true),
-                Some(state_vec),
+                Some(state_vec.clone()),
                 Some(state_vec));
 
             // Timestamp Subcircuit
