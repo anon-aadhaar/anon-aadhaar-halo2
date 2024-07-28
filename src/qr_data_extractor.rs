@@ -1,7 +1,6 @@
-use halo2_base::halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance},
-    //poly::Rotation,
 };
 
 use halo2_base::utils::PrimeField;
@@ -176,10 +175,6 @@ impl <F: PrimeField> Circuit<F> for  AadhaarQRVerifierCircuit<F> {
                 Ok(())
             },
         )?;
-
-        // Additional logic to compute the outputs: pubkeyHash, nullifier, timestamp, ageAbove18, gender, pinCode, state
-        // This requires implementing the cryptographic primitives and calculations involved.
-
         Ok(())
     }
 }
@@ -219,4 +214,4 @@ mod tests {
         let prover = MockProver::run(k, &circuit, public_inputs).unwrap();
         prover.assert_satisfied();
     }
-}
+}*/

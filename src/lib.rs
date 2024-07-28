@@ -13,7 +13,6 @@ pub mod big_uint;
 pub use big_uint::*;
 use rsa::RsaPrivateKey;
 use std::marker::PhantomData;
-//use std::sync::Arc;
 
 use halo2_base::halo2_proofs::{
     circuit::{Cell, Layouter, SimpleFloorPlanner, Value},
@@ -2950,15 +2949,6 @@ mod test {
             let signal_hash = "4294967295";
             let signal_val: u64 = signal_hash.parse().unwrap();
             let signal_circuit = SquareCircuit::<F>::new(F::from(signal_val));
-
-            // Entire Aadhaar QR Verifier Circuit
-            /*let _circuit = AadhaarQRVerifierCircuit::<F>::new(
-                //extractor: extractor_circuit,
-                hash_and_sign_circuit.clone(),
-                cond_secrets_circuit.clone(),
-                timestamp_circuit.clone(),
-                signal_circuit.clone(),
-            );*/
     
             // Verifying the RSA-SHA256 subcircuit
             let num_limbs = 2048 / 64;
