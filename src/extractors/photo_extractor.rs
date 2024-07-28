@@ -1,4 +1,4 @@
-use halo2_base::halo2_proofs::{
+/*use halo2_base::halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Expression, Selector},
@@ -165,4 +165,4 @@ impl<F: FieldExt> PhotoExtractorCircuit<F> {
             end_index,
         }
     }
-}
+}*/

@@ -1,14 +1,13 @@
 use halo2_base::halo2_proofs::{
-    arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, 
-    //poly::Rotation,
 };
+//use std::sync::Arc;
 
-//use halo2_base::halo2_proofs::plonk::Expression::Constant as Constant;
+use halo2_base::utils::PrimeField;
 
-#[derive(Debug, Clone)]
-struct TimestampCircuit<F: FieldExt> {
+#[derive(Debug, Clone, Default)]
+pub struct TimestampCircuit<F: PrimeField> {
     year: Option<F>,
     month: Option<F>,
     day: Option<F>,
@@ -18,7 +17,7 @@ struct TimestampCircuit<F: FieldExt> {
 }
 
 #[derive(Debug, Clone)]
-struct TimestampConfig {
+pub struct TimestampConfig {
     sel: Selector,
     year: Column<Advice>,
     month: Column<Advice>,
@@ -29,7 +28,27 @@ struct TimestampConfig {
     timestamp: Column<Advice>,
 }
 
-impl<F: FieldExt> Circuit<F> for TimestampCircuit<F> {
+impl<F: PrimeField> TimestampCircuit<F> {
+    pub fn new(
+        year: Option<F>,
+        month: Option<F>,
+        day: Option<F>,
+        hour: Option<F>,
+        minute: Option<F>,
+        second: Option<F>,
+    ) -> Self {
+        Self {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+        }
+    }
+}
+
+impl<F: PrimeField> Circuit<F> for TimestampCircuit<F> {
     type Config = TimestampConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
