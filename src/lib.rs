@@ -6,13 +6,13 @@
 //!
 //! In addition to [`RSAConfig`], this library also provides a high-level circuit implementation to verify pkcs1v15 signatures, [`RSASignatureVerifier`].  
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
-#![feature(stdsimd)]
-//#![feature(stdarch_x86_avx512)]
+
 #![feature(more_qualified_paths)]
 pub mod big_uint;
 pub use big_uint::*;
 use rsa::RsaPrivateKey;
 use std::marker::PhantomData;
+
 
 use halo2_base::halo2_proofs::{
     circuit::{Cell, Layouter, SimpleFloorPlanner, Value},
@@ -35,9 +35,10 @@ use rsa::{
 };
 
 mod qr_data_extractor;
+//pub mod poseidon;
 //mod aadhaar_verifier_circuit;
 pub mod timestamp;
-
+//pub mod nullifier;
 pub mod conditional_secrets;
 pub mod signal;
 /*mod extractors{
@@ -50,6 +51,7 @@ pub mod signal;
     pub mod qrdata_extractor;
 }*/
 
+use poseidon::Poseidon;
 use crate::timestamp::TimestampCircuit;
 use crate::conditional_secrets::IdentityCircuit;
 use crate::signal::SquareCircuit;
@@ -427,6 +429,7 @@ mod test {
     use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
     use sha2::{Digest, Sha256};
     use halo2_base::halo2_proofs::halo2curves::pasta::Fp;
+    use halo2curves::bn256::Fr as FR; 
 
     #[test]
     fn test_rsa_signature_with_hash_circuit1() {
@@ -2898,11 +2901,6 @@ mod test {
                 state_vec.push(msg[i].parse::<u8>().unwrap());
             };
 
-            /*let photo_vec: Vec<u8> = Vec::new();
-            for i in 185..1137 {
-                photo_vec.push(msg[i].parse::<u8>().unwrap());
-            };*/
-
             // RSA-SHA256 Subcircuit
             let mut rng = thread_rng();
             let private_key = RsaPrivateKey::new(&mut rng, TestRSASignatureWithHashCircuit1::<F>::BITS_LEN)
@@ -2934,6 +2932,32 @@ mod test {
                 Some(true),
                 Some(state_vec.clone()),
                 Some(state_vec));
+
+            // Nullifier subcircuit
+            const R_F: usize = 8;
+            const R_P: usize = 57;
+            const T: usize = 5;
+            const RATE: usize = 4;
+
+            let mut poseidon = Poseidon::<FR, T, RATE>::new(R_F, R_P);
+            let nullifier_seed = "12345678"; 
+            let mut photo_vec: Vec<u64> = Vec::new();
+
+            let null_fr = nullifier_seed.parse::<u64>().unwrap();
+            photo_vec.push(null_fr);
+            for i in 185..1137 {
+                photo_vec.push(msg[i].parse::<u64>().unwrap());
+            };
+
+            let fr_vector: Vec<FR> = photo_vec
+                                        .iter()
+                                        .map(|s| FR::from(*s))
+                                        .collect();
+            
+            let inputs = fr_vector;
+            poseidon.update(&inputs[..]);
+            let nullifier = poseidon.squeeze();
+            println!("Poseidon Output: {:?}", nullifier);
 
             // Timestamp Subcircuit
             let timestamp_circuit = TimestampCircuit::<F>::new(
