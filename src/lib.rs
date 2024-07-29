@@ -2827,6 +2827,20 @@ mod test {
                 "157",
                 "243"
               ];
+
+            /*let mut delimiter_indices = [
+                2, 4, 26, 38, 49, 51, 68, 79, 80, 96, 97, 104, 118, 124, 152, 165, 179, 184
+            ];
+
+            let timestamp_year_start_index = delimiter_indices[1] + 5;
+            let timestamp_year_end_index = timestamp_year_start_index.clone() + 4;
+            let timestamp_month_start_index = timestamp_year_end_index.clone() + 1;
+            let timestamp_month_end_index = timestamp_month_start_index.clone() + 1;
+            let timestamp_day_start_index = timestamp_month_end_index.clone() + 1;
+            let timestamp_day_end_index = timestamp_day_start_index.clone() + 1;
+            let timestamp_hour_start_index = timestamp_day_end_index.clone() + 1;
+            let timestamp_hour_end_index = timestamp_hour_start_index.clone() + 1;*/
+            
             let mut year_vec: Vec<u64> = Vec::new();
             let mut month_vec: Vec<u64> = Vec::new();
             let mut day_vec: Vec<u64> = Vec::new();
@@ -2856,6 +2870,13 @@ mod test {
             let month_data: u64 = month_vec[0] * 10 + month_vec[1];
             let day_data: u64 = day_vec[0] * 10 + day_vec[1];
             let hour_data: u64 = hour_vec[0] * 10 + hour_vec[1];
+
+            /*let birth_day_start_index = delimiter_indices[3] + 1;
+            let birth_day_end_index = birth_day_start_index.clone() + 1;
+            let birth_month_start_index = delimiter_indices[3] + 4;
+            let birth_month_end_index = birth_day_start_index.clone() + 1;
+            let birth_year_start_index = delimiter_indices[3] + 7;
+            let birth_month_end_index = birth_day_start_index.clone() + 3;*/
 
             let mut birth_year_vec: Vec<u64> = Vec::new();
             let mut birth_month_vec: Vec<u64> = Vec::new();
@@ -2890,6 +2911,7 @@ mod test {
                 }
             }
 
+            //let gender_index = delimiter_indices[4] + 1;
             let gender_data = msg[50].parse::<u8>().unwrap();
 
             let mut pincode_vec: Vec<u32> = Vec::new();
@@ -3010,8 +3032,8 @@ mod test {
 
             prover.verify().unwrap();
 
-            let sha_proof_verification_time = start_time.elapsed();
-            println!("RSA-SHA256 Proof Verification Time elapsed: {:?}", sha_proof_verification_time);
+            let sha_proof_verification_duration = start_time.elapsed();
+            println!("RSA-SHA256 Proof Verification Time elapsed: {:?}", sha_proof_verification_duration);
 
             // Verifying the conditional secrets subcircuit
             let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
@@ -3048,6 +3070,30 @@ mod test {
 
             let signal_proof_verification_duration = start_time.elapsed();
             println!("Signal Proof Verification Time elapsed: {:?}", signal_proof_verification_duration);
+            
+            // Benchmarks
+            println!("##### Benchmarks #####");
+            let sha_prove_time = sha_proof_generation_duration - extraction_duration;
+            let sha_ver_time = sha_proof_verification_duration - sha_proof_generation_duration;
+            println!("RSA-SHA256 proving time: {:?}", sha_prove_time);
+            println!("RSA-SHA256 verification time: {:?}", sha_ver_time);
+            let nullifier_prove_time = nullifier_proof_verification_duration - nullifier_proof_generation_duration;
+            let nullifier_ver_time = extraction_duration - nullifier_proof_verification_duration;
+            println!("Nullifier proving time: {:?}", nullifier_prove_time);
+            println!("Nullifier verification time: {:?}", nullifier_ver_time);
+            let cs_prove_time = cs_proof_generation_duration - sha_proof_verification_duration;
+            let cs_ver_time = cs_proof_verification_duration - cs_proof_generation_duration;
+            println!("Conditional Secrets proving time: {:?}", cs_prove_time);
+            println!("Conditional Secrets verification time: {:?}", cs_ver_time);
+            let timestamp_prove_time = timestamp_proof_generation_duration - cs_proof_verification_duration;
+            let timestamp_ver_time = timestamp_proof_verification_duration - timestamp_proof_generation_duration;
+            println!("Timestamp proving time: {:?}", timestamp_prove_time);
+            println!("Timestamp verification time: {:?}", timestamp_ver_time);
+            let signal_prove_time = signal_proof_generation_duration - timestamp_proof_verification_duration;
+            let signal_ver_time = signal_proof_verification_duration - signal_proof_generation_duration;
+            println!("Signal proving time: {:?}", signal_prove_time);
+            println!("Signal verification time: {:?}", signal_ver_time);
+
 
         }
         run::<Fr>();
