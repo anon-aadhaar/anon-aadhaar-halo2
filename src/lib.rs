@@ -8,6 +8,8 @@
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
 
 #![feature(more_qualified_paths)]
+
+use std::time::Instant;
 pub mod big_uint;
 pub use big_uint::*;
 use rsa::RsaPrivateKey;
@@ -2830,6 +2832,10 @@ mod test {
             let mut day_vec: Vec<u64> = Vec::new();
             let mut hour_vec: Vec<u64> = Vec::new();
             let mut timestamp_vec: Vec<u64> = Vec::new();
+
+            // Start time 1
+            let start_time = Instant::now();
+
             for i in 9..26 {
                 timestamp_vec.push(msg[i].parse::<u64>().unwrap());
                 if i >= 9 && i <= 12 {
@@ -2934,6 +2940,9 @@ mod test {
                 Some(state_vec));
 
             // Nullifier subcircuit
+            let nullifier_proof_generation_duration = start_time.elapsed();
+            println!("Nullifier Proof Generation Time elapsed: {:?}", nullifier_proof_generation_duration);
+
             const R_F: usize = 8;
             const R_P: usize = 57;
             const T: usize = 5;
@@ -2958,6 +2967,9 @@ mod test {
             poseidon.update(&inputs[..]);
             let nullifier = poseidon.squeeze();
             println!("Poseidon Output: {:?}", nullifier);
+
+            let nullifier_proof_verification_duration = start_time.elapsed();
+            println!("Nullifier Proof Verification Time elapsed: {:?}", nullifier_proof_verification_duration);
 
             // Timestamp Subcircuit
             let timestamp_circuit = TimestampCircuit::<F>::new(
@@ -2984,25 +2996,58 @@ mod test {
                 .collect::<Vec<F>>();
             let public_inputs = vec![n_fes, hash_fes];
             let k = 15;
+
+            let extraction_duration = start_time.elapsed();
+            println!("Extraction of Data Time elapsed: {:?}", extraction_duration);
+
             let prover = match MockProver::run(k, &hash_and_sign_circuit.clone(), public_inputs) {
                 Ok(prover) => prover,
                 Err(e) => panic!("{:#?}", e),
             };
+
+            let sha_proof_generation_duration = start_time.elapsed();
+            println!("RSA-SHA256 Proof Generation Time elapsed: {:?}", sha_proof_generation_duration);
+
             prover.verify().unwrap();
+
+            let sha_proof_verification_time = start_time.elapsed();
+            println!("RSA-SHA256 Proof Verification Time elapsed: {:?}", sha_proof_verification_time);
 
             // Verifying the conditional secrets subcircuit
             let prover: MockProver<Fp> = MockProver::run(k, &cond_secrets_circuit.clone(), vec![]).unwrap();
+
+            let cs_proof_generation_duration = start_time.elapsed();
+            println!("Conditional Secrets Proof Generation Time elapsed: {:?}", cs_proof_generation_duration);
+
             assert!(prover.verify().is_ok());
+
+            let cs_proof_verification_duration = start_time.elapsed();
+            println!("Conditional Secrets Proof Verification Time elapsed: {:?}", cs_proof_verification_duration);
 
             // Verifying the timestamp subcircuit
             let public_inputs = vec![];
             let prover = MockProver::run(k, &timestamp_circuit.clone(), public_inputs).unwrap();
+
+            let timestamp_proof_generation_duration = start_time.elapsed();
+            println!("Timestamp Proof Generation Time elapsed: {:?}", timestamp_proof_generation_duration);
+
             assert_eq!(prover.verify(), Ok(()));
+
+            let timestamp_proof_verification_duration = start_time.elapsed();
+            println!("Timestamp Proof  Verification Time elapsed: {:?}", timestamp_proof_verification_duration);
 
             // Verifying the signal hash subcircuit
             let public_inputs = vec![F::from(signal_val * signal_val)];
+
             let prover = MockProver::run(k, &signal_circuit.clone(), vec![public_inputs]).unwrap();
+
+            let signal_proof_generation_duration = start_time.elapsed();
+            println!("Signal Proof Generation Time elapsed: {:?}", signal_proof_generation_duration);
+
             prover.assert_satisfied();
+
+            let signal_proof_verification_duration = start_time.elapsed();
+            println!("Signal Proof Verification Time elapsed: {:?}", signal_proof_verification_duration);
 
         }
         run::<Fr>();
