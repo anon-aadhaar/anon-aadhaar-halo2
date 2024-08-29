@@ -1,5 +1,7 @@
 use halo2_base::halo2_proofs::{
-    circuit::{Layouter, SimpleFloorPlanner, Value}, plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, poly::Rotation
+    circuit::{Layouter, SimpleFloorPlanner, Value},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
+    poly::Rotation,
 };
 use halo2_base::utils::PrimeField;
 //use std::sync::Arc;
@@ -58,12 +60,8 @@ impl<F: PrimeField> Circuit<F> for SquareCircuit<F> {
             |mut region| {
                 config.selector.enable(&mut region, 0)?;
 
-                let _signal_hash_cell = region.assign_advice(
-                    || "signal hash",
-                    config.advice[0],
-                    0,
-                    || signal_hash,
-                )?;
+                let _signal_hash_cell =
+                    region.assign_advice(|| "signal hash", config.advice[0], 0, || signal_hash)?;
 
                 let _signal_hash_square_cell = region.assign_advice(
                     || "signal hash square",
@@ -90,7 +88,7 @@ impl<F: PrimeField> SquareCircuit<F> {
 
 #[cfg(test)]
 mod tests {
-    use halo2_base::halo2_proofs::dev::MockProver; 
+    use halo2_base::halo2_proofs::dev::MockProver;
     use halo2_base::halo2_proofs::halo2curves::pasta::Fp;
     #[test]
     fn test_square_circuit() {

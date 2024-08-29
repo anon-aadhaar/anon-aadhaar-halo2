@@ -1,6 +1,6 @@
 use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector}, 
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
 };
 //use std::sync::Arc;
 
@@ -206,16 +206,35 @@ impl<F: PrimeField> Circuit<F> for TimestampCircuit<F> {
                     (year - 1969) / 4 - (year - 1901) / 100 + (year - 1601) / 400
                 };
 
-                let year_val = self.year.map(|year| year.get_lower_32() as u64).unwrap_or(0);
-                let month_val = self.month.map(|month| month.get_lower_32() as u64).unwrap_or(0);
+                let year_val = self
+                    .year
+                    .map(|year| year.get_lower_32() as u64)
+                    .unwrap_or(0);
+                let month_val = self
+                    .month
+                    .map(|month| month.get_lower_32() as u64)
+                    .unwrap_or(0);
                 let day_val = self.day.map(|day| day.get_lower_32() as u64).unwrap_or(0);
-                let hour_val = self.hour.map(|hour| hour.get_lower_32() as u64).unwrap_or(0);
-                let minute_val = self.minute.map(|minute| minute.get_lower_32() as u64).unwrap_or(0);
-                let second_val = self.second.map(|second| second.get_lower_32() as u64).unwrap_or(0);
+                let hour_val = self
+                    .hour
+                    .map(|hour| hour.get_lower_32() as u64)
+                    .unwrap_or(0);
+                let minute_val = self
+                    .minute
+                    .map(|minute| minute.get_lower_32() as u64)
+                    .unwrap_or(0);
+                let second_val = self
+                    .second
+                    .map(|second| second.get_lower_32() as u64)
+                    .unwrap_or(0);
 
-                let days_passed = Value::known(F::from((year_val - 1970) * 365 + leap_years_before(year_val)))
-                    .and_then(|days| Value::known(days + F::from(days_till_previous_month[(month_val - 1) as usize])))
-                    .and_then(|days| Value::known(days + F::from(day_val - 1)));
+                let days_passed = Value::known(F::from(
+                    (year_val - 1970) * 365 + leap_years_before(year_val),
+                ))
+                .and_then(|days| {
+                    Value::known(days + F::from(days_till_previous_month[(month_val - 1) as usize]))
+                })
+                .and_then(|days| Value::known(days + F::from(day_val - 1)));
 
                 // Convert days to seconds and add hours, minutes, and seconds
                 let total_seconds = days_passed
@@ -225,12 +244,7 @@ impl<F: PrimeField> Circuit<F> for TimestampCircuit<F> {
                     .and_then(|t| Value::known(t) + Value::known(F::from(second_val)));
 
                 // Expose the total seconds as a public output
-                region.assign_advice(
-                    || "timestamp",
-                    config.timestamp,
-                    0,
-                    || total_seconds,
-                )?;
+                region.assign_advice(|| "timestamp", config.timestamp, 0, || total_seconds)?;
 
                 Ok(())
             },
@@ -261,5 +275,3 @@ mod tests {
         assert_eq!(prover.verify(), Ok(()));
     }
 }
-
-
