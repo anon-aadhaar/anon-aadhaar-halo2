@@ -1,6 +1,6 @@
 This repo contains the Halo2 implementation for the Anon-Aadhaar protocol.
 
-At this point, the main components are :-
+The main components of the circuit are :-
 1. Verification of an RSA signature of a SHA-256 hashed message.
 2. Extraction of fields from signed data. If reveal true: age > 18, gender, state, pincode.
 3. Computing the Nullifier from the Poseidon Hash function.
