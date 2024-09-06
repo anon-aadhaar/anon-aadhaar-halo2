@@ -8,6 +8,7 @@
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
 
 #![feature(more_qualified_paths)]
+#![feature(build_hasher_simple_hash_one)]
 
 use std::time::Instant;
 pub mod big_uint;
@@ -20,6 +21,19 @@ use halo2_base::halo2_proofs::{
     plonk::{Circuit, Column, ConstraintSystem, Error, Instance},
 };
 
+use halo2_proofs::plonk::Circuit as Halo2ProofsCircuit;
+use halo2_proofs::{
+    arithmetic::Field,
+    circuit::{Layouter as OtherLayouter, SimpleFloorPlanner as OtherSimpleFloorPlanner, Value as OtherValue},
+    plonk::{ConstraintSystem as OtherConstraintSystem, Error as OtherError},
+};
+
+use snark_verifier_sdk::{
+    evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
+    halo2::{gen_srs, aggregation::AggregationCircuit, gen_snark_shplonk},
+    gen_pk, Snark, CircuitExt, SHPLONK,
+};
+
 use halo2_base::{gates::range::RangeStrategy::Vertical, QuantumCell, SKIP_FIRST_PASS};
 use halo2_base::{
     gates::{range::RangeConfig, GateInstructions},
@@ -27,6 +41,7 @@ use halo2_base::{
     AssignedValue, Context,
 };
 use num_bigint::BigUint;
+use halo2curves::bn256::Fr;
 
 use rsa::{
     pkcs1v15::SigningKey,
@@ -304,6 +319,128 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
     }
 }
 
+/*impl Halo2ProofsCircuit<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
+    type Config = TestRSASignatureWithHashConfig1<Fr>;
+    type FloorPlanner = SimpleFloorPlanner;
+
+    fn without_witnesses(&self) -> Self {
+        unimplemented!();
+    }
+
+    fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
+        let range_config = RangeConfig::configure(
+            meta,
+            Vertical,
+            &[Self::NUM_ADVICE],
+            &[Self::NUM_LOOKUP_ADVICE],
+            Self::NUM_FIXED,
+            Self::LOOKUP_BITS,
+            0,
+            15,
+        );
+        let bigint_config = BigUintConfig::construct(range_config.clone(), 64);
+        let rsa_config = RSAConfig::construct(bigint_config, Self::BITS_LEN, Self::EXP_LIMB_BITS);
+        let sha256_config = Sha256DynamicConfig::configure(
+            meta,
+            vec![Self::MSG_LEN],
+            range_config,
+            Self::SHA256_LOOKUP_BITS,
+            Self::SHA256_LOOKUP_ADVICE,
+            true,
+        );
+        let n_instance = meta.instance_column();
+        let hash_instance = meta.instance_column();
+        meta.enable_equality(n_instance);
+        meta.enable_equality(hash_instance);
+        Self::Config {
+            rsa_config,
+            sha256_config,
+            n_instance,
+            hash_instance,
+        }
+    }
+
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<Fr>,
+    ) -> Result<(), Error> {
+        let biguint_config = config.rsa_config.biguint_config();
+        config.sha256_config.load(&mut layouter)?;
+        biguint_config.range().load_lookup_table(&mut layouter)?;
+        let mut first_pass = SKIP_FIRST_PASS;
+        let (public_key_cells, hashed_msg_cells) = layouter.assign_region(
+            || "random rsa modpow test with 2048 bits public keys",
+            |region| {
+                if first_pass {
+                    first_pass = false;
+                    return Ok((vec![], vec![]));
+                }
+
+                let mut aux = biguint_config.new_context(region);
+                let ctx = &mut aux;
+                let signing_key = SigningKey::<rsa::sha2::Sha256>::new(self.private_key.clone());
+                let sign = signing_key.sign(&self.msg).to_vec();
+                let sign_big = BigUint::from_bytes_be(&sign);
+                let sign = config
+                    .rsa_config
+                    .assign_signature(ctx, RSASignature::new(Value::known(sign_big)))?;
+                let n_big =
+                    BigUint::from_radix_le(&self.public_key.n().clone().to_radix_le(16), 16)
+                        .unwrap();
+                let e_fix = RSAPubE::Fix(BigUint::from(Self::DEFAULT_E));
+                let public_key = config
+                    .rsa_config
+                    .assign_public_key(ctx, RSAPublicKey::new(Value::known(n_big), e_fix))?;
+                let mut verifier = RSASignatureVerifier::new(
+                    config.rsa_config.clone(),
+                    config.sha256_config.clone(),
+                );
+                let (is_valid, hashed_msg) =
+                    verifier.verify_pkcs1v15_signature(ctx, &public_key, &self.msg, &sign)?;
+                biguint_config
+                    .gate()
+                    .assert_is_const(ctx, &is_valid, Fr::one());
+                biguint_config.range().finalize(ctx);
+                {
+                    println!("total advice cells: {}", ctx.total_advice);
+                    let const_rows = ctx.total_fixed + 1;
+                    println!("maximum rows used by a fixed column: {const_rows}");
+                    println!("lookup cells used: {}", ctx.cells_to_lookup.len());
+                }
+                let public_key_cells = public_key
+                    .n
+                    .limbs()
+                    .into_iter()
+                    .map(|v| v.cell())
+                    .collect::<Vec<Cell>>();
+                let hashed_msg_cells = hashed_msg
+                    .into_iter()
+                    .map(|v| v.cell())
+                    .collect::<Vec<Cell>>();
+                Ok((public_key_cells, hashed_msg_cells))
+            },
+        )?;
+        for (i, cell) in public_key_cells.into_iter().enumerate() {
+            layouter.constrain_instance(cell, config.n_instance, i)?;
+        }
+        for (i, cell) in hashed_msg_cells.into_iter().enumerate() {
+            layouter.constrain_instance(cell, config.hash_instance, i)?;
+        }
+        Ok(())
+    }
+}*/
+
+impl CircuitExt<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
+    fn num_instance(&self) -> Vec<usize> {
+        vec![1]
+    }
+
+    fn instances(&self) -> Vec<Vec<Fr>> {
+        vec![vec![self.0]]
+    }
+}
+
 impl<F: PrimeField> Circuit<F> for TestRSASignatureWithHashCircuit1<F> {
     type Config = TestRSASignatureWithHashConfig1<F>;
     type FloorPlanner = SimpleFloorPlanner;
@@ -427,6 +564,31 @@ mod test {
     use rand::{thread_rng, Rng};
     use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
     use sha2::{Digest, Sha256};
+    use halo2_solidity_verifier::{encode_calldata, BatchOpenScheme::Bdfg21, Keccak256Transcript,
+        SolidityGenerator};
+
+    use halo2_proofs::{plonk::keygen_vk, poly::kzg::commitment::ParamsKZG};
+
+    mod prelude {
+        pub use rand::{
+            rngs::{OsRng, StdRng},
+            RngCore, SeedableRng,
+        };
+        pub use std::{
+            collections::HashMap,
+            fs::{create_dir_all, File},
+            io::Write,
+            ops::Range,
+        };
+    
+        pub fn seeded_std_rng() -> impl RngCore {
+            StdRng::seed_from_u64(OsRng.next_u64())
+        }
+    }
+
+    use halo2curves::bn256::Bn256;
+    use crate::test::prelude::*;
+    use std::io::Write;
 
     #[test]
     fn test_rsa_signature_with_hash_circuit1() {
@@ -875,6 +1037,77 @@ mod test {
             let hash_and_sign_circuit =
                 TestRSASignatureWithHashCircuit1::<F>::new(private_key, public_key, byte_vec);
 
+            //let circuit = hash_and_sign_circuit.clone();
+
+            let params_app = gen_srs(8);
+            let snarks = [(); 3].map(|_| gen_application_snark(&params_app));
+
+            let params = gen_srs(22);
+            //let agg_circuit = AggregationCircuit::<SHPLONK>::new(&params, snarks);
+            let agg_circuit = hash_and_sign_circuit.clone();
+
+            let start0 = start_timer!(|| "gen vk & pk");
+            let pk = gen_pk(
+                &params,
+                &agg_circuit.without_witnesses(),
+                Some(Path::new("./examples/agg.pk")),
+            );
+            end_timer!(start0);
+
+            let num_instances = agg_circuit.num_instance();
+            let instances = agg_circuit.instances();
+            //let proof_calldata = gen_evm_proof_shplonk(&params, &pk, agg_circuit, instances.clone());
+
+            let deployment_code = gen_evm_verifier_shplonk::<AggregationCircuit<SHPLONK>>(
+                &params,
+                pk.get_vk(),
+                num_instances,
+                Some(Path::new("./examples/StandardPlonkVerifierExample.sol")),
+            );
+            //evm_verify(deployment_code, instances, proof_calldata);
+
+            /*let mut rng = seeded_std_rng();
+            let k = 12;
+            //let params = setup(K_RANGE, &mut rng);
+            let param = ParamsKZG::<Bn256>::setup(k, &mut rng);
+
+            let vk = keygen_vk(&param, &circuit).unwrap();
+            let generator = SolidityGenerator::new(&param, &vk, Bdfg21, 0);
+            let (verifier_solidity, _) = generator.render_separately().unwrap();
+            save_solidity("Halo2Verifier.sol", &verifier_solidity);*/
+        
+            /*let verifier_creation_code = compile_solidity(&verifier_solidity);
+            let verifier_creation_code_size = verifier_creation_code.len();
+            println!("Verifier creation code size: {verifier_creation_code_size}");
+        
+            let mut evm = Evm::default();
+            let verifier_address = evm.create(verifier_creation_code);*/
+        
+            //let deployed_verifier_solidity = verifier_solidity;
+            
+            //let num_instances = k as usize;
+           
+            // Solidity Verifier Gas Cost
+            /*let vk = keygen_vk(&params[&k], &circuit).unwrap();
+            let pk = keygen_pk(&params[&k], vk, &circuit).unwrap();
+            let generator = SolidityGenerator::new(&params[&k], pk.get_vk(), Bdfg21, num_instances);
+            let (verifier_solidity, vk_solidity) = generator.render_separately().unwrap();
+            save_solidity(format!("Halo2VerifyingKey-{k}.sol"), &vk_solidity);
+    
+            assert_eq!(deployed_verifier_solidity, verifier_solidity);
+    
+            let vk_creation_code = compile_solidity(&vk_solidity);
+            let vk_address = evm.create(vk_creation_code);
+    
+            let calldata = {
+                let instances = circuit.instances();
+                let proof = create_proof_checked(&params[&k], &pk, circuit, &instances, &mut rng);
+                encode_calldata(Some(vk_address.into()), &proof, &instances)
+            };
+            let (gas_cost, output) = evm.call(verifier_address, calldata);
+            assert_eq!(output, [vec![0; 31], vec![1]].concat());
+            println!("Gas cost of verifying standard Plonk with 2^{k} rows: {gas_cost}");*/
+
             // Conditional Secrets Subcircuit
             let cond_secrets_circuit = IdentityCircuit::new(
                 Some(true),
@@ -1062,4 +1295,65 @@ mod test {
         }
         run::<Fr>();
     }
+
+    /*fn save_solidity(name: impl AsRef<str>, solidity: &str) {
+        const DIR_GENERATED: &str = "./generated";
+    
+        create_dir_all(DIR_GENERATED).unwrap();
+        File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))
+            .unwrap()
+            .write_all(solidity.as_bytes())
+            .unwrap();
+    }*/
+    
+    /*fn setup(k_range: Range<u32>, mut rng: impl RngCore) -> HashMap<u32, ParamsKZG<Bn256>> {
+        k_range
+            .clone()
+            .zip(k_range.map(|k| ParamsKZG::<Bn256>::setup(k, &mut rng)))
+            .collect()
+    }*/
+    
+    /*fn create_proof_checked(
+        params: &ParamsKZG<Bn256>,
+        pk: &ProvingKey<G1Affine>,
+        circuit: impl Circuit<Fr>,
+        instances: &[Fr],
+        mut rng: impl RngCore,
+    ) -> Vec<u8> {
+        use halo2_proofs::{
+            poly::kzg::{
+                multiopen::{ProverSHPLONK, VerifierSHPLONK},
+                strategy::SingleStrategy,
+            },
+            transcript::TranscriptWriterBuffer,
+        };
+    
+        let proof = {
+            let mut transcript = Keccak256Transcript::new(Vec::new());
+            create_proof::<_, ProverSHPLONK<_>, _, _, _, _>(
+                params,
+                pk,
+                &[circuit],
+                &[&[instances]],
+                &mut rng,
+                &mut transcript,
+            )
+            .unwrap();
+            transcript.finalize()
+        };
+    
+        let result = {
+            let mut transcript = Keccak256Transcript::new(proof.as_slice());
+            verify_proof::<_, VerifierSHPLONK<_>, _, _, SingleStrategy<_>>(
+                params,
+                pk.get_vk(),
+                SingleStrategy::new(params),
+                &[&[instances]],
+                &mut transcript,
+            )
+        };
+        assert!(result.is_ok());
+    
+        proof
+    }*/
 }
