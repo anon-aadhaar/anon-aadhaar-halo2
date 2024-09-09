@@ -10,16 +10,13 @@ use num_bigint::BigUint;
 use crate::timestamp::{TimestampCircuit, TimestampConfig};
 use crate::conditional_secrets::{IdentityCircuit, IdentityConfig};
 use crate::signal::{SquareCircuit, SquareConfig};
-//use std::sync::Arc;
 
 #[derive(Clone)]
 struct AadhaarQRVerifierCircuit<F: PrimeField> {
-    //extractor: ExtractAndPackAsIntCircuit,
     hash_and_sign: TestRSASignatureWithHashCircuit1<F>,
     cond_secrets: IdentityCircuit,
     timestamp: TimestampCircuit<F>,
     signal: SquareCircuit<F>,
-    //layouter: impl Layouter<F>
 }
 
 impl<F: PrimeField> AadhaarQRVerifierCircuit<F> {
@@ -50,7 +47,6 @@ impl<F:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F> {
     }
 
     fn configure(cs: &mut ConstraintSystem<F>) -> Self::Config {
-        //let extractor = ExtractAndPackAsIntCircuit::configure(cs);
         let hash_and_sign = TestRSASignatureWithHashCircuit1::<F>::configure(cs);
         let cond_secrets = IdentityCircuit::configure(cs);
         let timestamp = TimestampCircuit::configure(cs);
@@ -64,7 +60,6 @@ impl<F:PrimeField> Circuit<F> for AadhaarQRVerifierCircuit<F> {
         config: Self::Config,
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-        //self.extractor.synthesize(cs, extractor_config)?;
         self.hash_and_sign.synthesize(config.0, layouter)?;
         self.cond_secrets.synthesize(config.1, layouter)?;
         self.timestamp.synthesize(config.2, layouter)?;
@@ -87,16 +82,6 @@ mod tests {
     #[test]
     fn test_aadhaar_qr_verifier_circuit() {
         fn run<F: PrimeField>() {
-            // Extractor Subcircuit
-            /*let n_delimited_data = vec![Some(5), Some(10), Some(15), Some(255), Some(1), Some(2)];
-            let delimiter_indices = vec![Some(1), Some(2), Some(3)];
-            let extractor_circuit = ExtractAndPackAsIntCircuit {
-                n_delimited_data: n_delimited_data.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
-                delimiter_indices: delimiter_indices.iter().map(|&v| Value::known(F::from(v.unwrap()))).collect(),
-                extract_position: 1, // Example value
-                extract_max_length: 31, // Example value
-                _marker: PhantomData,
-            };*/
 
             // RSA-SHA256 Subcircuit
             let mut rng = thread_rng();
@@ -145,7 +130,6 @@ mod tests {
 
             // Entire Aadhaar QR Verifier Circuit
             let _circuit = AadhaarQRVerifierCircuit::<F>::new(
-                //extractor: extractor_circuit,
                 hash_and_sign_circuit.clone(),
                 cond_secrets_circuit.clone(),
                 timestamp_circuit.clone(),

@@ -35,22 +35,10 @@ use rsa::{
     RsaPublicKey,
 };
 
-mod qr_data_extractor;
-//pub mod poseidon;
-//mod aadhaar_verifier_circuit;
-pub mod timestamp;
-//pub mod nullifier;
 pub mod conditional_secrets;
+mod qr_data_extractor;
 pub mod signal;
-/*mod extractors{
-    pub mod extractor;
-    pub mod timstamp_extractor;
-    pub mod age_extractor;
-    pub mod gender_extractor;
-    pub mod pincode_extractor;
-    pub mod photo_extractor;
-    pub mod qrdata_extractor;
-}*/
+pub mod timestamp;
 
 use crate::conditional_secrets::IdentityCircuit;
 use crate::signal::SquareCircuit;

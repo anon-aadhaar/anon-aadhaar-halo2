@@ -4,7 +4,6 @@ use halo2_base::halo2_proofs::plonk::{
 };
 use halo2_base::halo2_proofs::poly::Rotation;
 use halo2_base::utils::PrimeField;
-//use std::sync::Arc;
 
 #[derive(Default, Clone)]
 pub struct IdentityCircuit {

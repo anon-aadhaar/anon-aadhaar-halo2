@@ -2,7 +2,6 @@ use halo2_base::halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
 };
-//use std::sync::Arc;
 
 use halo2_base::utils::PrimeField;
 

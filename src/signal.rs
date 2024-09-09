@@ -4,12 +4,10 @@ use halo2_base::halo2_proofs::{
     poly::Rotation,
 };
 use halo2_base::utils::PrimeField;
-//use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct SquareConfig {
     advice: [Column<Advice>; 2],
-    //instance: Column<Instance>,
     selector: Selector,
 }
 
