@@ -22,6 +22,10 @@ Benchmarks:
 | Timestamp    | 9.821774ms    | 1.990614ms    |
 | Signal    | 12.089368ms    | 78.350583ms    |
 
+
+The Solidity Verifier of the entire Halo2 Circuit was obtained by using the PSE Halo2-Solidity-Generator repo:
+https://github.com/privacy-scaling-explorations/halo2-solidity-verifier.
+
 The Verification Cost of the Solidity Verifier of the entire Aadhaar_QR_Verifier circuit:  
 
 Total Gas Cost: 6520332 gas  
