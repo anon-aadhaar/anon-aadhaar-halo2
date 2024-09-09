@@ -21,3 +21,9 @@ Benchmarks:
 | Conditional Secrets    | 17.916018ms    | 307.496281ms    |
 | Timestamp    | 9.821774ms    | 1.990614ms    |
 | Signal    | 12.089368ms    | 78.350583ms    |
+
+The Verification Cost of the Solidity Verifier of the entire Aadhaar_QR_Verifier circuit:  
+
+Total Gas Cost: 6520332 gas  
+Transaction Cost: 5669850 gas  
+Execution Cost: 4955130 gas  
