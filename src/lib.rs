@@ -22,17 +22,18 @@ use halo2_base::halo2_proofs::{
 };
 
 use halo2_proofs::plonk::Circuit as Halo2ProofsCircuit;
+//use halo2_proofs::plonk::CircuitExt as Halo2ProofsCircuitExt;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter as OtherLayouter, SimpleFloorPlanner as OtherSimpleFloorPlanner, Value as OtherValue},
     plonk::{ConstraintSystem as OtherConstraintSystem, Error as OtherError},
 };
 
-use snark_verifier_sdk::{
+/*use snark_verifier_sdk::{
     evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
     halo2::{gen_srs, aggregation::AggregationCircuit, gen_snark_shplonk},
     gen_pk, Snark, CircuitExt, SHPLONK,
-};
+};*/
 
 use halo2_base::{gates::range::RangeStrategy::Vertical, QuantumCell, SKIP_FIRST_PASS};
 use halo2_base::{
@@ -319,7 +320,7 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
     }
 }
 
-/*impl Halo2ProofsCircuit<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
+impl Halo2ProofsCircuit<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
     type Config = TestRSASignatureWithHashConfig1<Fr>;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -327,7 +328,7 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
         unimplemented!();
     }
 
-    fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
+    fn configure(meta: &mut OtherConstraintSystem<Fr>) -> Self::Config {
         let range_config = RangeConfig::configure(
             meta,
             Vertical,
@@ -363,7 +364,7 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
     fn synthesize(
         &self,
         config: Self::Config,
-        mut layouter: impl Layouter<Fr>,
+        mut layouter: impl OtherLayouter<Fr>,
     ) -> Result<(), Error> {
         let biguint_config = config.rsa_config.biguint_config();
         config.sha256_config.load(&mut layouter)?;
@@ -429,9 +430,9 @@ impl<F: PrimeField> TestRSASignatureWithHashCircuit1<F> {
         }
         Ok(())
     }
-}*/
+}
 
-impl CircuitExt<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
+/*impl CircuitExt<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
     fn num_instance(&self) -> Vec<usize> {
         vec![1]
     }
@@ -439,7 +440,7 @@ impl CircuitExt<Fr> for TestRSASignatureWithHashCircuit1<Fr> {
     fn instances(&self) -> Vec<Vec<Fr>> {
         vec![vec![self.0]]
     }
-}
+}*/
 
 impl<F: PrimeField> Circuit<F> for TestRSASignatureWithHashCircuit1<F> {
     type Config = TestRSASignatureWithHashConfig1<F>;
@@ -1037,7 +1038,7 @@ mod test {
             let hash_and_sign_circuit =
                 TestRSASignatureWithHashCircuit1::<F>::new(private_key, public_key, byte_vec);
 
-            //let circuit = hash_and_sign_circuit.clone();
+            /*let circuit = hash_and_sign_circuit.clone();
 
             let params_app = gen_srs(8);
             let snarks = [(); 3].map(|_| gen_application_snark(&params_app));
@@ -1063,10 +1064,10 @@ mod test {
                 pk.get_vk(),
                 num_instances,
                 Some(Path::new("./examples/StandardPlonkVerifierExample.sol")),
-            );
+            );*/
             //evm_verify(deployment_code, instances, proof_calldata);
-
-            /*let mut rng = seeded_std_rng();
+            let circuit = hash_and_sign_circuit.clone();
+            let mut rng = seeded_std_rng();
             let k = 12;
             //let params = setup(K_RANGE, &mut rng);
             let param = ParamsKZG::<Bn256>::setup(k, &mut rng);
@@ -1074,7 +1075,7 @@ mod test {
             let vk = keygen_vk(&param, &circuit).unwrap();
             let generator = SolidityGenerator::new(&param, &vk, Bdfg21, 0);
             let (verifier_solidity, _) = generator.render_separately().unwrap();
-            save_solidity("Halo2Verifier.sol", &verifier_solidity);*/
+            save_solidity("Halo2Verifier.sol", &verifier_solidity);
         
             /*let verifier_creation_code = compile_solidity(&verifier_solidity);
             let verifier_creation_code_size = verifier_creation_code.len();
@@ -1246,6 +1247,16 @@ mod test {
                 timestamp_proof_verification_duration
             );
 
+            /*let mut rng = seeded_std_rng();
+            let k = 12;
+            //let params = setup(K_RANGE, &mut rng);
+            let param = ParamsKZG::<Bn256>::setup(k, &mut rng);
+            let circuit = signal_circuit.clone();
+            let vk = keygen_vk(&param, &circuit).unwrap();
+            let generator = SolidityGenerator::new(&param, &vk, Bdfg21, 0);
+            let (verifier_solidity, _) = generator.render_separately().unwrap();
+            save_solidity("Halo2Verifier.sol", &verifier_solidity);*/
+
             // Verifying the signal hash subcircuit
             let public_inputs = vec![F::from(signal_val * signal_val)];
 
@@ -1296,7 +1307,7 @@ mod test {
         run::<Fr>();
     }
 
-    /*fn save_solidity(name: impl AsRef<str>, solidity: &str) {
+    fn save_solidity(name: impl AsRef<str>, solidity: &str) {
         const DIR_GENERATED: &str = "./generated";
     
         create_dir_all(DIR_GENERATED).unwrap();
@@ -1304,7 +1315,7 @@ mod test {
             .unwrap()
             .write_all(solidity.as_bytes())
             .unwrap();
-    }*/
+    }
     
     /*fn setup(k_range: Range<u32>, mut rng: impl RngCore) -> HashMap<u32, ParamsKZG<Bn256>> {
         k_range
