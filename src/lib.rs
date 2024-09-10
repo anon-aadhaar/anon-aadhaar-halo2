@@ -7,9 +7,6 @@
 //! In addition to [`RSAConfig`], this library also provides a high-level circuit implementation to verify pkcs1v15 signatures, [`RSASignatureVerifier`].  
 //! The verification function in [`RSAConfig`] requires as input a hashed message, whereas the function in [`RSASignatureVerifier`] computes a SHA256 hash of the given message and verifies the given signature for that hash.
 
-#![feature(more_qualified_paths)]
-
-use std::time::Instant;
 pub mod big_uint;
 pub use big_uint::*;
 use rsa::RsaPrivateKey;
@@ -39,11 +36,6 @@ pub mod conditional_secrets;
 mod qr_data_extractor;
 pub mod signal;
 pub mod timestamp;
-
-use crate::conditional_secrets::IdentityCircuit;
-use crate::signal::SquareCircuit;
-use crate::timestamp::TimestampCircuit;
-use poseidon::Poseidon;
 
 mod chip;
 mod instructions;
@@ -409,12 +401,17 @@ impl<F: PrimeField> Circuit<F> for TestRSASignatureWithHashCircuit1<F> {
 mod test {
     use super::*;
     use crate::big_uint::decompose_biguint;
+    use crate::conditional_secrets::IdentityCircuit;
+    use crate::signal::SquareCircuit;
+    use crate::timestamp::TimestampCircuit;
     use halo2_base::halo2_proofs::halo2curves::pasta::Fp;
     use halo2_base::halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr};
     use halo2curves::bn256::Fr as FR;
+    use poseidon::Poseidon;
     use rand::{thread_rng, Rng};
     use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
     use sha2::{Digest, Sha256};
+    use std::time::Instant;
 
     #[test]
     fn test_rsa_signature_with_hash_circuit1() {
