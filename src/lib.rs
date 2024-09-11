@@ -761,9 +761,9 @@ mod test {
             let mut hour_vec: Vec<u64> = Vec::new();
             let mut timestamp_vec: Vec<u64> = Vec::new();
 
-            // Start time 1
             let start_time = Instant::now();
 
+            // Calculate the timestamp
             for i in timestamp_year_start_index..timestamp_hour_end_index + 1 {
                 timestamp_vec.push(msg[i].parse::<u64>().unwrap());
                 if i >= timestamp_year_start_index && i <= timestamp_year_end_index {
@@ -783,6 +783,7 @@ mod test {
             let day_data: u64 = day_vec[0] * 10 + day_vec[1];
             let hour_data: u64 = hour_vec[0] * 10 + hour_vec[1];
 
+            // Calculate the birthday
             let birth_day_start_index = delimiter_indices[dob_position() - 1] + 1;
             let birth_day_end_index = birth_day_start_index.clone() + 1;
             let birth_month_start_index = birth_day_end_index.clone() + 2;
@@ -811,8 +812,8 @@ mod test {
                 + birth_year_vec[1] * 100
                 + birth_year_vec[2] * 10
                 + birth_year_vec[3];
-            println!("Birth year data : {birth_year_data}");
-            println!("Year data: {year_data}");
+
+            // Calculate the Age
             let age_by_year: u64 = year_data - birth_year_data - 1;
             let mut age: u64 = age_by_year;
             if birth_month_data > month_data {
@@ -823,21 +824,24 @@ mod test {
                 }
             }
 
+            // Calculate the Gender
             let gender_index = delimiter_indices[gender_position() - 1] + 1;
             let gender_data = msg[gender_index].parse::<u8>().unwrap();
 
+            // Calculate the Pincode of the Address
             let pincode_start_index = delimiter_indices[pincode_position() - 1] + 1;
             let pincode_end_index = delimiter_indices[pincode_position()];
             let mut pincode_vec: Vec<u32> = Vec::new();
             for i in pincode_start_index..pincode_end_index {
                 pincode_vec.push(to_integer_small(msg[i].parse::<u32>().unwrap()));
             }
-
+            
             let mut pincode_data = 0;
             for i in pincode_vec {
                 pincode_data = pincode_data * 10 + i;
             }
 
+            // Calculate the State of the Address
             let state_start_index = delimiter_indices[state_position() - 1] + 1;
             let state_end_index = delimiter_indices[state_position()];
             let mut state_vec: Vec<u8> = Vec::new();
